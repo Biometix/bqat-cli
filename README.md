@@ -1,92 +1,282 @@
-# bqat
+# Biometric Quality Assessment Tool (BQAT)
 
+Quality Assessor is biometric quality assessment tool for generating and analysing biometric sample quality to international standards and supporting customized metrics. It takes as input directory of biometric images/data in standard formats (e.g. wsq,png,jpg) and output both the raw quality information as well as an analysis report. 
 
+It is available to be run from a docker image. 
 
-## Getting started
++ ### Fingerprint
+    The analysis of fingerprint engine based on NIST/NFIQ2 quality features. The quality score links image quality of optical and ink 500 PPI fingerprints to operational recognition performance.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
++ ### Face
+    The face image assessment provides metrics includes head pose, smile detection, inter-eye-distance, closed eyes, etc.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
++ ### Iris
+    The face image assessment provides various quality attributes, features, and ISO metrics.
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+
+This tool is designed to be run using Docker. The docker image can either be pulled from the Biometix registry or built locally.
+
+### Pull the Image
+
+```sh
+# Login with GitLab deploy token provided
+docker login registry.gitlab.com
+
+# Pull the quality-assessor image
+docker pull registry.gitlab.com/biometix/projects/quality-assessor
+
+# Tag the image with a shorter more accessible name
+docker image tag registry.gitlab.com/biometix/projects/quality-assessor quality-assessor
+```
+
+### Build the Image
+
+```sh
+# Build the image (must be in the quality-assessor repository)
+docker build -t quality-assessor .
+```
+
+### Load Image from local `.tar`
+
+```sh
+# Load packaged docker image file into the host system
+docker load --input [path/to/quality-assessor.tar]
+
+# Tag the image with "latest" if the image came with version tag
+docker tag quality-assessor:v0.1.0 quality-assessor:latest
+```
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+The tool is designed to be executed on a directory of /data. You will need to mount the primary working directory (where all the images are stored) into the container. The default directory in the container for mounting the work directory is `/app/data`, this can be done using the `-v` option in Docker.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+The tool does require additional shared memory and this can be set by using the `--shm-size` option in Docker. Generally setting this to 8G works well.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Quick start
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+The `run.sh` is a convenience script for running BQAT.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+Example:
+``` sh
+# Run samples in /input with fingerprint mode as default
+./run.sh --input data/input/
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+# Run benchmarking task
+./run.sh --input data/input/ --benchmarking
 
-## License
-For open source projects, say how it is licensed.
+# Run samples in /input with iris mode
+./run.sh --input data/input/ --mode iris
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+# Search the file with name pattern in the input folder
+./run.sh --input data/input/ --mode iris --filename "*FINGER*"
+
+# Search the file with specific format in the input folder
+./run.sh --input data/input/ --mode iris --search "jp2 pgm bmp"
+
+# Convert the files with specific formats before scanning
+./run.sh --input data/input/ --mode fingerprint --convert "jp2 jpeg"
+
+# Specify the file format to convert to
+./run.sh --input data/input/ --mode fingerprint --target wsq
+
+# Run samples in /input with face mode, extension function enabled, limit to 100k scan
+./run.sh --input data/input/ --mode face --extension --limit 100000
+```
+
+Alternate interface:
+``` sh
+# Enter interactive CLI
+./run.sh --interactive
+```
+
+There are other convenience scripts under `/scripts`.
+
+### Optional Flags
+You can append optional flags as follows:
+* -M, --mode         (REQUIRED)  Specify assessment mode (Fingerprint, Face, IRIS).
+* -I, --input        (REQUIRED)  Specify input directory
+* -O, --output       (OPTIONAL)  Specify output csv file or directory
+* -B, --benchmark    (OPTIONAL)  Run system benchmarking analysis
+* -L, --limit        (OPTIONAL)  Set a limit for number of files to scan
+* -F, --filename     (OPTIONAL)  Specify filename pattern for searching in the folder
+* -S, --search       (OPTIONAL)  Specify file types to search within the input folder
+* -C, --convert      (OPTIONAL)  Specify file types to convert before processing
+* -T, --target       (OPTIONAL)  Specify target type to convert to
+* -E, --extension    (OPTIONAL)  Enable customized extension function
+* -A, --arm          (OPTIONAL)  Disable multithreading (For ARM64 platform)
+* -X, --interactive  (OPTIONAL)  Enter terminal interactive ui
+* --help             Show a help message
+
+If the output or log options are not specified then the tool will use a default value.
+
+### Command Structure
+
+```sh
+docker run [DOCKER OPTIONS] quality-assessor [OPTIONS]
+```
+
+### Help Information
+
+```sh
+docker run quality-assessor
+```
+
+### General Use Case (Examples)
+
+Full docker cli command:
+```sh
+docker run --rm -it \
+    --shm-size=8G \
+    --memory=12G \
+    -v $(pwd)/data:/app/data \
+    quality-assessor \
+    --mode face \
+    --input data/input-dir/ \
+    --output data/output/
+```
+
+The above commands may need to be modified for the current use case. The main changes would be modifying the host working directory `$(pwd)/data`, the input directory `/data/input-dir/` to the directory containing sample images to be analysed, and the output/log file names.
+
+For powershell (windows) replace this line
+``` sh
+-v ${PWD}/data:/app/data
+```
+
+
+### Input Format
+
+For fingerprints the tool works with image formats WSQ and PNG. For both of these formats the image will be run directly through NFIQ2. The image formats JPG and BMP are also supported but will be converted to WSQ first before being run through NFIQ2.
+
+NFIQ2 expects images to have a resolution of at least 500 PPI. The tool will force NFIQ2 to run on images of lower resolution but the result may be inaccurate.
+
+### Output Format
+
+The tool will produce a csv with all the quality scores generated by the engines and some additional columns.
+
+#### _Fingerprint_
+| Column Name | Description |
+|---|----|
+| Filename | Filename of the image, including the directory path |
+| FingerCode | NFIQ2 Output | 
+| QualityScore | NFIQ2 Output | 
+| OptionalError | NFIQ2 Output | 
+| Quantized | NFIQ2 Output | 
+| Resampled | NFIQ2 Output | 
+| UniformImage | NFIQ2 Output | 
+| EmptyImageOrContrastTooLow | NFIQ2 Output | 
+| FingerprintImageWithMinutiae | NFIQ2 Output | 
+| SufficientFingerprintForeground | NFIQ2 Output | 
+| EdgeStd | Metric to identify malformed images |
+| Width | Width of the image in pixels |
+| Height | Height of the image in pixels |
+| uuid | The unique id assigned to this image |
+
+#### _Face_
+| Column Name | Description |
+|---|----|
+| Filename | Filename of the image, including the directory path |
+| IPD | Inter-pupillary distance |
+| Closed eye left | Bool value |
+| Closed eye right | Bool value |
+| Head pose yaw | Direction and degree |
+| Head pose pitch | Direction and degree |
+| Head pose roll | Direction and degree |
+| Expression smile | Bool value |
+| Face recognition confidence level | Percentage |
+
+#### _Iris_
+| Column Name | Description |
+|---|----|
+| quality | An overall quality score that leverages several statistics together |
+| contrast | Raw score quantifying overall image contrast |
+| sharpness | Raw score quantifying the sharpness of the image |
+| iris_diameter | Raw diameter of the iris measured in pixels |
+| percent_visible_iris | Percentage of visible iris area |
+| iris_pupil_gs | Raw measure quantifying how distinguishable the boundary is between the pupil and the iris |
+| iris_sclera_gs | Raw measure quantifying how distinguishable the boundary is between the iris and the sclera |
+
+#### _Report_
+A overview statistical report on each of the column. 
+#### _Log_
+The log file will show some information on the process, including errors, warnings, and the total execution time of the job.
+
+## Run Benchmarking Task
+
+The tool has a benchmark module to profile the host machine. It will go through a dataset of 1000 files which consist of multiple formats and even corrupted files. The output also includes simple spec of the host machine.
+
+```sh
+docker run --rm -it --shm-size=8G quality-assessor --benchmarking
+```
+
+## Advanced Usage
+### Adding new analysis functions
+
+This section describes how you can modify the quality assessor to add additional evaluation processes. This is done by modifying the `util.py` file.
+
+Define a new function in the `util.py` file with the one of the following formats:
+
+```python
+def my_process_func(img_path: str) -> dict:
+    """Add code to load and process image"""
+    return {"column_name": calculated_value}
+```
+```python
+def my_process_func(img: object) -> dict:
+    """Add code to process image (loaded using Pillow)"""
+    return {"column_name": calculated_value}
+```
+Then modify the function `scan_file` function to add in the new function.
+
+```python
+def scan_file(filepath):
+    ...
+    result = {}
+    ...
+    result.update(my_process_func(filepath))
+    result.update(my_process_func(img))
+    return result
+```
+
+To run the quality assessor with the new function: either rebuild the image or mount the `util.py` file into the container.
+
+```sh
+docker run --rm -it --shm-size=8G \
+    -v $(pwd)/quality_assessor/util.py:/app/quality_assessor/util.py \
+    -v $(pwd)/data:/app/data \
+    quality-assessor -I data/input-dir/
+```
+
+### Alternate method
+Create a `extensions.py` under `/data` with function named `func` and run the command with `--extension` flag.
+
+## Licence
+
+The source code for the site is licensed under the MIT license - it is planned for full release as an Open Source project
+
+## Limitations
+Please note that only the following file extensions (file types) are supported:
+* `.jpeg`
+* `.jpg`
+* `.bmp`
+* `.png`
+* `.jp2`
+* `.wsq` (fingerprint only)
+> For fingerprint, by default, all input types will be converted to `.png`.
+
+For iris samples, if the resolution of the input is higher than 640 by 480, it will be resized.
+
+## Known Issues
++ If you tag the pulled image with a new name rather than `quality-assessor`, the process would not start.
++ For large dataset on Linux, in the runtime, when the memory is exhausted, the kernel will try to reclaim some memory, which could freeze the system if critical system process was killed. This may not affect the final output because the docker runtime are still alive. This will not happen on MacOS or windows. Try to limit the memory or cpu available to Docker runtime or increase physical memory. Modify `--cpus` or `--memory` flags in `run.sh` or in the vanilla docker command.
+
+## Offline Deployment
+For offline deployment, save the locally built image as `.tar` and put it in the `deploy/` folder. Compress the folder and deliver the zip file.
+
+``` sh
+# Build the image with version tag
+docker build -t bqat:v0.1.0 -f Dockerfile.centos .
+
+# Save the image as tar file
+docker save -o bqat-v0.1.0.tar bqat:v0.1.0
+```
