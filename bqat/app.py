@@ -105,7 +105,8 @@ def run(
                 for path in files:
                     result = scan(path, mode=mode, source=convert, target=target)
 
-                    if log := result.get("log"):
+                    log = result.get("log", {})
+                    if log:
                         log.update({"file": path})
                         write_log(log_dir, log)
                     header = False if "error" in list(log.keys()) else True
@@ -189,7 +190,7 @@ def run(
         click.echo(f"failed to reload metadata for log: {str(e)}")
 
     try:
-        write_report(report_dir, output_dir)
+        write_report(report_dir, output_dir, f"Biometric Quality Report (BQAT v{version})")
     except Exception as e:
         click.echo(f"failed to generate report: {str(e)}")
 
@@ -214,7 +215,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
 
     TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
-    if mode == "fingerprint":
+    if mode == "fingerprint" or mode == "finger":
         samples = f"samples/fingerprint.zip"
     elif mode == "face":
         samples = f"samples/face.zip"
@@ -336,15 +337,14 @@ def scan_task(path, output_dir, log_dir, mode, convert, target):
         write_log(log_dir, {"file": path, "task error": str(e)})
         return
 
-    if log := result.get("log"):
+    log = result.get("log", {})
+    if log:
         log.update({"file": path})
         write_log(log_dir, log)
     header = False if "error" in list(log.keys()) else True
 
     if result:
         write_csv(output_dir, result, header)
-
-    return
 
 
 @ray.remote

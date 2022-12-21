@@ -8,7 +8,8 @@ from bqat.app import benchmark, run
 from bqat.utils import manu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
-CONVERT_TYPE = ["jpg", "jpeg", "bmp", "jp2", "wsq"]
+# CONVERT_TYPE = ["jpg", "jpeg", "bmp", "jp2", "wsq"]
+CONVERT_TYPE = ""
 TARGET_TYPE = "png"
 
 

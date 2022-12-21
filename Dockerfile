@@ -32,17 +32,19 @@ RUN python3.8 -m pip install --upgrade pip && \
     python3.8 -m pip install -r requirements.txt
 
 # COPY bqat/core/bqat_core/misc/nfiq2-2.2.0-1.el7.x86_64.rpm /app/misc/
-RUN wget https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2-devel-2.2.0-1.el7.x86_64.rpm -P /app/misc/
-RUN yum -y install ./misc/*el7*rpm
+RUN wget https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2-2.2.0-1.el7.x86_64.rpm -P /app/misc/ && \
+    yum -y install ./misc/*el7*rpm
+
+COPY bqat/core/bqat_core/misc/haarcascade_smile.xml bqat_core/misc/haarcascade_smile.xml
 
 COPY . .
 
 ARG Version
 LABEL BQAT.Version=$Version
 
-RUN useradd assessor
-RUN chown -R assessor /app
-USER assessor
+# RUN useradd assessor
+# RUN chown -R assessor /app
+# USER assessor
 
 ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
-CMD [ "python3.8 -m bqat --help" ]
+# CMD [ "python3.8 -m bqat --help" ]

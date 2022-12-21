@@ -554,28 +554,30 @@ def to_upper(ext_list):
     return ext_list + cap_list
 
 
-def write_report(report_dir, output_dir):
+def write_report(report_dir, output_dir, title="Biometric Quality Report (BQAT)"):
     print("\n> Report:")
     if not os.path.exists(report_dir.rsplit("/", 1)[0]):
         os.makedirs(report_dir.rsplit("/", 1)[0])
     df = pd.read_csv(output_dir)
-    df.set_index("uuid", inplace=True)
+    # df.set_index("uuid", inplace=True)
     ProfileReport(
         df,
-        title="Biometric Quality Report",
+        title=title,
         explorative=True,
         correlations={"cramers": {"calculate": False}},
+        html={"navbar_show": True, "style": {"theme": "united"}},
     ).to_file(report_dir)
 
 
-def write_csv(path, out={}, header=False, init=False):
+def write_csv(path, out="", header=False, init=False):
     if init:
         if not os.path.exists(path.rsplit("/", 1)[0]):
             os.makedirs(path.rsplit("/", 1)[0])
         with open(path, "w") as f:
             writer = csv.writer(f)
-            writer.writerow(out)
+            writer.writerow("")
     else:
+        out = json.loads(pd.json_normalize(out).to_json(orient='index'))["0"]
         if header:
             if os.path.exists(path):
                 with open(path, "r") as f:
@@ -601,32 +603,20 @@ def write_log(path, out=None, init=False, finish=False):
     if init:
         if not os.path.exists(path.rsplit("/", 1)[0]):
             os.makedirs(path.rsplit("/", 1)[0])
-        # with open(path, "w") as f:
-        #     f.write("[]")
-        # return
         with open(path, "w") as f:
-            f.write('[\n')
+            f.write('[')
     elif finish:
-        # with open(path, "rb+") as f:
-        #     f.seek(-1, os.SEEK_END)
-        #     if f.read(1) != b"]":
-        #         return
-        #     f.seek(-1, os.SEEK_CUR)
-        #     f.write(bytes("]\n", "utf-8"))
-        # return
         with open(path, "rb+") as f:
-            f.seek(-2, os.SEEK_END)
-            f.write(bytes("\n]", "utf-8"))
+            f.seek(-1, os.SEEK_END)
+            if f.read1() == b"[":
+                f.seek(-1, os.SEEK_CUR)
+                f.write(bytes("[]", "utf-8"))
+            else:
+                f.seek(-1, os.SEEK_CUR)
+                f.write(bytes("]", "utf-8"))
     else:
-        # with open(path, "rb+") as f:
-        #     f.seek(-2, os.SEEK_END)
-        #     if f.read(1) == b"[":
-        #         f.write(bytes(json.dumps(out) + "]", "utf-8"))
-        #     else:
-        #         f.seek(-1, os.SEEK_END)
-        #         f.write(bytes("," + json.dumps(out) + "]", "utf-8"))
         with open(path, "a") as f:
-            f.write(json.dumps(out) + ',\n')
+            f.write(json.dumps(out) + ',')
 
 
 def validate_path(path) -> str:
