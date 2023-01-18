@@ -1,6 +1,6 @@
 # Biometric Quality Assessment Tool (BQAT)
 
-Quality Assessor is biometric quality assessment tool for generating and analysing biometric sample quality to international standards and supporting customized metrics. It takes as input directory of biometric images/data in standard formats (e.g. wsq,png,jpg) and output both the raw quality information as well as an analysis report. 
+BQAT is a biometric quality assessment tool for generating and analysing biometric sample quality to international standards and supporting customized metrics. It takes as input directory of biometric images/data in standard formats (e.g. wsq,png,jpg) and output both the raw quality information as well as an analysis report. 
 
 It is available to be run from a docker image. 
 
@@ -15,36 +15,13 @@ It is available to be run from a docker image.
 
 ## Installation
 
-This tool is designed to be run using Docker. The docker image can either be pulled from the Biometix registry or built locally.
-
-### Pull the Image
-
-```sh
-# Login with GitLab deploy token provided
-docker login registry.gitlab.com
-
-# Pull the quality-assessor image
-docker pull registry.gitlab.com/biometix/projects/quality-assessor
-
-# Tag the image with a shorter more accessible name
-docker image tag registry.gitlab.com/biometix/projects/quality-assessor quality-assessor
-```
+This tool is designed to be run as container.
 
 ### Build the Image
 
 ```sh
-# Build the image (must be in the quality-assessor repository)
-docker build -t quality-assessor .
-```
-
-### Load Image from local `.tar`
-
-```sh
-# Load packaged docker image file into the host system
-docker load --input [path/to/quality-assessor.tar]
-
-# Tag the image with "latest" if the image came with version tag
-docker tag quality-assessor:v0.1.0 quality-assessor:latest
+# Build the image
+docker build -t bqat:latest .
 ```
 
 ## Usage
@@ -90,8 +67,6 @@ Alternate interface:
 ./run.sh --interactive
 ```
 
-There are other convenience scripts under `/scripts`.
-
 ### Optional Flags
 You can append optional flags as follows:
 * -M, --mode         (REQUIRED)  Specify assessment mode (Fingerprint, Face, IRIS).
@@ -110,40 +85,12 @@ You can append optional flags as follows:
 
 If the output or log options are not specified then the tool will use a default value.
 
-### Command Structure
-
-```sh
-docker run [DOCKER OPTIONS] quality-assessor [OPTIONS]
-```
-
-### Help Information
-
-```sh
-docker run quality-assessor
-```
-
-### General Use Case (Examples)
-
-Full docker cli command:
-```sh
-docker run --rm -it \
-    --shm-size=8G \
-    --memory=12G \
-    -v $(pwd)/data:/app/data \
-    quality-assessor \
-    --mode face \
-    --input data/input-dir/ \
-    --output data/output/
-```
-
-The above commands may need to be modified for the current use case. The main changes would be modifying the host working directory `$(pwd)/data`, the input directory `/data/input-dir/` to the directory containing sample images to be analysed, and the output/log file names.
-
-For powershell (windows) replace this line
+> For powershell (windows) replace this line
 ``` sh
 -v ${PWD}/data:/app/data
 ```
 
-
+## Input & Output
 ### Input Format
 
 For fingerprints the tool works with image formats WSQ and PNG. For both of these formats the image will be run directly through NFIQ2. The image formats JPG and BMP are also supported but will be converted to WSQ first before being run through NFIQ2.
@@ -201,54 +148,17 @@ A overview statistical report on each of the column.
 #### _Log_
 The log file will show some information on the process, including errors, warnings, and the total execution time of the job.
 
-## Run Benchmarking Task
+## Setup validation OR Benchmarking
 
 The tool has a benchmark module to profile the host machine. It will go through a dataset of 1000 files which consist of multiple formats and even corrupted files. The output also includes simple spec of the host machine.
 
 ```sh
-docker run --rm -it --shm-size=8G quality-assessor --benchmarking
+# Use run.sh
+./run.sh --benchmarking
+
+# OR in CLI
+docker run --rm -it --shm-size=8G bqat --benchmarking
 ```
-
-## Advanced Usage
-### Adding new analysis functions
-
-This section describes how you can modify the quality assessor to add additional evaluation processes. This is done by modifying the `util.py` file.
-
-Define a new function in the `util.py` file with the one of the following formats:
-
-```python
-def my_process_func(img_path: str) -> dict:
-    """Add code to load and process image"""
-    return {"column_name": calculated_value}
-```
-```python
-def my_process_func(img: object) -> dict:
-    """Add code to process image (loaded using Pillow)"""
-    return {"column_name": calculated_value}
-```
-Then modify the function `scan_file` function to add in the new function.
-
-```python
-def scan_file(filepath):
-    ...
-    result = {}
-    ...
-    result.update(my_process_func(filepath))
-    result.update(my_process_func(img))
-    return result
-```
-
-To run the quality assessor with the new function: either rebuild the image or mount the `util.py` file into the container.
-
-```sh
-docker run --rm -it --shm-size=8G \
-    -v $(pwd)/quality_assessor/util.py:/app/quality_assessor/util.py \
-    -v $(pwd)/data:/app/data \
-    quality-assessor -I data/input-dir/
-```
-
-### Alternate method
-Create a `extensions.py` under `/data` with function named `func` and run the command with `--extension` flag.
 
 ## Licence
 
@@ -267,15 +177,12 @@ Please note that only the following file extensions (file types) are supported:
 For iris samples, if the resolution of the input is higher than 640 by 480, it will be resized.
 
 ## Known Issues
-+ If you tag the pulled image with a new name rather than `quality-assessor`, the process would not start.
 + For large dataset on Linux, in the runtime, when the memory is exhausted, the kernel will try to reclaim some memory, which could freeze the system if critical system process was killed. This may not affect the final output because the docker runtime are still alive. This will not happen on MacOS or windows. Try to limit the memory or cpu available to Docker runtime or increase physical memory. Modify `--cpus` or `--memory` flags in `run.sh` or in the vanilla docker command.
 
 ## Offline Deployment
-For offline deployment, save the locally built image as `.tar` and put it in the `deploy/` folder. Compress the folder and deliver the zip file.
-
 ``` sh
 # Build the image with version tag
-docker build -t bqat:v0.1.0 -f Dockerfile.centos .
+docker build -t bqat:v0.1.0 .
 
 # Save the image as tar file
 docker save -o bqat-v0.1.0.tar bqat:v0.1.0

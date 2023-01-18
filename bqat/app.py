@@ -17,8 +17,7 @@ from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
 
 from bqat import __version__ as version
-from bqat.utils import (convert_ram, validate_path, write_csv, write_log,
-                        write_report)
+from bqat.utils import convert_ram, validate_path, write_csv, write_log, write_report
 
 
 def run(
@@ -190,7 +189,9 @@ def run(
         click.echo(f"failed to reload metadata for log: {str(e)}")
 
     try:
-        write_report(report_dir, output_dir, f"Biometric Quality Report (BQAT v{version})")
+        write_report(
+            report_dir, output_dir, f"Biometric Quality Report (BQAT v{version})"
+        )
     except Exception as e:
         click.echo(f"failed to generate report: {str(e)}")
 

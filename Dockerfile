@@ -42,9 +42,9 @@ COPY . .
 ARG Version
 LABEL BQAT.Version=$Version
 
-# RUN useradd assessor
-# RUN chown -R assessor /app
-# USER assessor
+RUN useradd assessor
+RUN chown -R assessor /app
+USER assessor
 
 ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
 # CMD [ "python3.8 -m bqat --help" ]
