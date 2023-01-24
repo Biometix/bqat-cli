@@ -20,15 +20,18 @@ RUN yum -y install epel-release && \
     ./configure --enable-optimizations && \
     make altinstall
 
-RUN mkdir -p /root/.deepface/weights
+# RUN mkdir -p /root/.deepface/weights
 
-RUN wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
-    wget https://github.com/serengil/deepface_models/releases/download/v1.0/age_model_weights.h5 -P /root/.deepface/weights/ && \
-    wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
-    wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
+# RUN wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
+#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/age_model_weights.h5 -P /root/.deepface/weights/ && \
+#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
+#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
 
-COPY requirements.txt /app/
+COPY Pipfile Pipfile.lock /app/
+
 RUN python3.8 -m pip install --upgrade pip && \
+    python3.8 -m pip install pipenv && \
+    pipenv requirements > requirements.txt && \
     python3.8 -m pip install -r requirements.txt
 
 # COPY bqat/core/bqat_core/misc/nfiq2-2.2.0-1.el7.x86_64.rpm /app/misc/
