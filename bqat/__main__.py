@@ -8,8 +8,6 @@ from bqat.app import benchmark, run
 from bqat.utils import manu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
-CONVERT_TYPE = ["jpg", "jpeg", "bmp", "jp2", "wsq"]
-TARGET_TYPE = "png"
 
 
 @click.command()
@@ -145,8 +143,8 @@ def main(
         click.echo("")
 
     input_type = search.split() if search else INPUT_TYPE
-    convert_type = convert.split() if convert else CONVERT_TYPE
-    target_type = target if target else TARGET_TYPE
+    convert_type = convert.split()
+    target_type = target
 
     mode = mode.casefold()
     if mode not in ("face", "finger", "fingerprint", "iris"):

@@ -4,10 +4,8 @@ verify_ssl = false
 name = "pypi"
 
 [packages]
-opencv-python = "==4.6.0.66"
 opencv-contrib-python = "==4.6.0.66"
 mediapipe = "*"
-image-quality = {git = "https://github.com/ocampor/image-quality"}
 click = "*"
 rich = "*"
 psutil = "*"
