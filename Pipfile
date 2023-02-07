@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = false
+name = "pypi"
+
+[packages]
+opencv-contrib-python = "==4.6.0.66"
+mediapipe = "*"
+click = "*"
+rich = "*"
+psutil = "*"
+py-cpuinfo = "*"
+pandas-profiling = "*"
+wsq = "*"
+pyinquirer = "*"
+ray = "*"
+pytest = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
