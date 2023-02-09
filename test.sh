@@ -3,5 +3,5 @@ docker run --rm -it \
     --cpus=8 \
     --memory=10G \
     -v "$(pwd)"/data:/app/data \
-    bqat \
+    bqat-cli \
     "python3.8 -m pytest tests -v"
