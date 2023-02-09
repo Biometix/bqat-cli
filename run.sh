@@ -9,5 +9,5 @@ docker run --rm -it \
     --cpus=8 \
     --memory=10G \
     -v "$(pwd)"/data:/app/data \
-    bqat:latest \
+    bqat-cli \
     "python3.8 -m bqat $flags"
