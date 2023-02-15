@@ -54,7 +54,9 @@ jobs:
           docker pull ghcr.io/biometix/bqat-cli:test
           docker tag ghcr.io/biometix/bqat-cli:test ghcr.io/biometix/bqat-cli:latest
       - name: Run Test Scripts
-        run: ./test.sh
+        run: |
+          mkdir data
+          ./test.sh
 
   release:
     name: Rebuild and Release
