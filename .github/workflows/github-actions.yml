@@ -44,15 +44,17 @@ jobs:
   
   test:
     name: Pull and Test
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Pull Test Image
-        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+        run: docker pull ghcr.io/biometix/bqat-cli:test
       - name: Run Test Scripts
         run: ./test.sh
 
   release:
     name: Rebuild and Release
+    needs: [build, test]
     runs-on: ubuntu-latest
     permissions:
       contents: read

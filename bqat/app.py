@@ -253,6 +253,7 @@ def filter(output, attributes, query, sort, cwd):
     summary = {"Outlier Filter": outlier_filter}
     Console().print_json(json.dumps(summary))
     print("\n>> Finished <<\n")
+    return dir
 
 
 def benchmark(mode: str, limit: int, single: bool) -> None:

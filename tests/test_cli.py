@@ -1,4 +1,4 @@
-from bqat.app import run
+from bqat.app import run, filter
 import glob
 import csv
 import json
@@ -24,7 +24,11 @@ def test_face_normal_default():
         single=False,
         type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
         convert="",
-        target=""
+        target="",
+        attributes="",
+        query="",
+        sort="",
+        cwd=""
     )
 
     outputs = glob.glob("data/tmp/*")
@@ -63,7 +67,11 @@ def test_finger_normal_default():
         single=False,
         type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
         convert="",
-        target=""
+        target="",
+        attributes="",
+        query="",
+        sort="",
+        cwd=""
     )
 
     outputs = glob.glob("data/tmp/*")
@@ -102,7 +110,11 @@ def test_iris_normal_default():
         single=False,
         type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
         convert="",
-        target=""
+        target="",
+        attributes="",
+        query="",
+        sort="",
+        cwd=""
     )
 
     outputs = glob.glob("data/tmp/*")
@@ -141,7 +153,11 @@ def test_face_single():
         single=True,
         type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
         convert="",
-        target=""
+        target="",
+        attributes="",
+        query="",
+        sort="",
+        cwd=""
     )
 
     outputs = glob.glob("data/tmp/*")
@@ -180,7 +196,11 @@ def test_face_limit():
         single=False,
         type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
         convert="",
-        target=""
+        target="",
+        attributes="",
+        query="",
+        sort="",
+        cwd=""
     )
 
     outputs = glob.glob("data/tmp/*")
@@ -199,4 +219,93 @@ def test_face_limit():
             with open(path) as f:
                 assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
 
+    shutil.rmtree("data/tmp/")
+
+
+def test_filter_combine():
+    if os.path.exists("data/tmp/"):
+        shutil.rmtree("data/tmp/")
+
+    run(
+        mode="finger",
+        input_folder="data/conformance/finger/",
+        output_folder="data/tmp/",
+        limit=10,
+        pattern="*",
+        single=False,
+        type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
+        convert="",
+        target="",
+        attributes="NFIQ2",
+        query="NFIQ2>50",
+        sort="",
+        cwd=""
+    )
+
+    outputs = glob.glob("data/tmp/*")
+
+    assert len(outputs) == 5
+
+    for path in outputs:
+        if path.endswith(".html"):
+            with open(path) as f:
+                assert f.readline().find("<!doctype html>") == 0
+        if path.endswith(".csv"):
+            with open(path) as f:
+                assert csv.Sniffer().has_header(f.read()) == True
+        if path.endswith(".json"):
+            with open(path) as f:
+                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
+    
+    shutil.rmtree("data/tmp/")
+
+
+def test_filter_individual():
+    if os.path.exists("data/tmp/"):
+        shutil.rmtree("data/tmp/")
+
+    run(
+        mode="finger",
+        input_folder="data/conformance/finger/",
+        output_folder="data/tmp/",
+        limit=10,
+        pattern="*",
+        single=False,
+        type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
+        convert="",
+        target="",
+        attributes="",
+        query="",
+        sort="",
+        cwd=""
+    )
+
+    outputs = glob.glob("data/tmp/*")
+
+    assert len(outputs) == 3
+
+    for path in outputs:
+        if path.endswith(".html"):
+            with open(path) as f:
+                assert f.readline().find("<!doctype html>") == 0
+        if path.endswith(".csv"):
+            with open(path) as f:
+                assert csv.Sniffer().has_header(f.read()) == True
+            dir = filter(
+                path,
+                attributes="NFIQ2",
+                query="NFIQ2>50",
+                sort="",
+                cwd=""
+            )
+            assert dir.get("output").endswith(".html") == True
+            with open(dir.get("output")) as f:
+                assert f.readline().find("<!doctype html>") == 0
+            assert dir.get("report").endswith(".html") == True
+            with open(dir.get("report")) as f:
+                assert f.readline().find("<!doctype html>") == 0
+        if path.endswith(".json"):
+            with open(path) as f:
+                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
+    
     shutil.rmtree("data/tmp/")

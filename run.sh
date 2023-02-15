@@ -19,4 +19,4 @@ docker run --rm -it \
     --memory=10G \
     -v "$(pwd)"/data:/app/data \
     ghcr.io/biometix/bqat-cli:latest \
-    "python3.8 -m bqat -W "$(pwd)" $flags"
+    "python3.8 -m bqat -W $(pwd) $flags"
