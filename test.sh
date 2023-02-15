@@ -1,3 +1,5 @@
+[ ! -d data ] && mkdir data
+
 docker run --rm \
     --shm-size=8G \
     -v "$(pwd)"/data:/app/data \
