@@ -1,5 +1,5 @@
-Biometric Quality Assessment Tool (BQAT)
-========================================
+Biometric Quality Assessment Tool (BQAT) - CLI
+==============================================
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
 <img alt="GitHub tag (latest by date)" src="https://img.shields.io/github/v/tag/biometix/bqat-cli">
@@ -37,11 +37,11 @@ We use GitHub issues for tracking requests and bugs. Contributors are expected t
 
 ### Submit changes:
 
-- Open an [Issue](https://github.com/Biometix/bqat-api/issues) with description of motivates.
+- Open an [Issue](https://github.com/Biometix/bqat-cli/issues) with description of motivates.
 
 - Discuss the proposed changes with other users and the maintainers
 
-- Open a [Pull Request](https://github.com/Biometix/bqat-api/pulls)
+- Open a [Pull Request](https://github.com/Biometix/bqat-cli/pulls)
 
 - Ensure all CI tests pass
 
