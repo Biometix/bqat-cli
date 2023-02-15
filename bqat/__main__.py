@@ -4,7 +4,7 @@ from rich.text import Text
 
 from bqat import __name__ as name
 from bqat import __version__ as version
-from bqat.app import benchmark, run
+from bqat.app import benchmark, run, filter
 from bqat.utils import manu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
@@ -14,7 +14,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 @click.option(
     "--mode",
     "-M",
-    default="fingerprint",
+    default="",
     help="Specify assessment mode (Fingerprint, Face, Iris).",
 )
 @click.option(
@@ -52,13 +52,13 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "-L",
     type=int,
     default=0,
-    help="Set a limit for number of files to scan.",
+    help="Set a limit for number of files to scan."
 )
 @click.option(
     "--filename",
     "-F",
     default="*",
-    help="Filename pattern to search within the input folder.",
+    help="Filename pattern to search within the input folder."
 )
 @click.option(
     "--search",
@@ -70,27 +70,51 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "--convert",
     "-C",
     default="",
-    help="Specify file formats to convert before processing.",
+    help="Specify file formats to convert before processing."
 )
 @click.option(
     "--target",
     "-T",
     default="",
-    help="Specify target format to convert to.",
+    help="Specify target format to convert to."
 )
 @click.option(
     "--arm",
     "-A",
     is_flag=True,
     default=False,
-    help="Disable multithreading (For ARM64 platform).",
+    help="Disable multithreading (For ARM64 platform)."
 )
 @click.option(
     "--interactive",
     "-X",
     is_flag=True,
     default=False,
-    help="Enter terminal interactive ui.",
+    help="Enter terminal interactive ui."
+)
+@click.option(
+    "--attributes",
+    "-D",
+    default="",
+    help="Specify attributes (columns) to investigate."
+)
+@click.option(
+    "--query",
+    "-Q",
+    default="",
+    help="Queries to apply on the attributes."
+)
+@click.option(
+    "--sort",
+    "-R",
+    default="",
+    help="Specify attributes (columns) to sort by."
+)
+@click.option(
+    "--cwd",
+    "-W",
+    default="",
+    help="Specify current working directory for url."
 )
 def main(
     input,
@@ -105,7 +129,11 @@ def main(
     convert,
     target,
     arm,
-    interactive
+    interactive,
+    attributes,
+    query,
+    sort,
+    cwd
 ):
     console = Console()
     title = Text("\nWelcome to")
@@ -147,26 +175,39 @@ def main(
     target_type = target
 
     mode = mode.casefold()
-    if mode not in ("face", "finger", "fingerprint", "iris"):
+    if mode not in ("face", "finger", "fingerprint", "iris", ""):
         click.echo(f">>> Mode [{mode}] not supported, exit.")
         return
     if mode == "fingerprint": mode = "finger"
 
-    if benchmarking:
-        benchmark(mode, limit, arm)
+    if mode:
+        if benchmarking:
+            benchmark(mode, limit, arm)
+        else:
+            run(
+                mode,
+                input,
+                output,
+                # report,
+                # log,
+                limit,
+                filename,
+                arm,
+                input_type,
+                convert_type,
+                target_type,
+                attributes,
+                query,
+                sort,
+                cwd
+            )
     else:
-        run(
-            mode,
-            input,
+        filter(
             output,
-            # report,
-            # log,
-            limit,
-            filename,
-            arm,
-            input_type,
-            convert_type,
-            target_type
+            attributes,
+            query,
+            sort,
+            cwd
         )
 
 

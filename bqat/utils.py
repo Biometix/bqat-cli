@@ -1,10 +1,14 @@
 import csv
+import datetime
 import json
 import os
+from pathlib import Path
 
 import pandas as pd
 from pandas_profiling import ProfileReport
 from PyInquirer import prompt
+
+from bqat import __version__ as version
 
 
 ## Helper functions
@@ -200,3 +204,78 @@ def manu() -> dict:
             ans["limit"] = 0
 
     return ans
+
+
+def filter_output(filepath, attributes, query, sort, cwd) -> dict:
+    if not (attributes or query or sort):
+        return False
+    print("\n> Outlier:")
+    dt = datetime.datetime.today()
+    timestamp = f"{dt.day}-{dt.month}-{dt.year}_{dt.hour}-{dt.minute}-{dt.second}"
+    p = Path(filepath)
+    table_dir = p.parent / f"outlier_table_{timestamp}.html"
+    report_dir = p.parent / f"outlier_report_{timestamp}.html"
+
+    if p.exists() and p.suffix in (".csv", ".CSV"):
+        data = pd.read_csv(p)
+        pd.set_option('display.max_colwidth', None)
+        if query:
+            data = data.query(query).copy()
+        if sort:    
+            data = data.sort_values(sort.split(',')).copy()
+        if attributes:
+            cols = attributes.split(',')
+            cols.insert(0, 'file') if 'file' not in cols else None
+            data = data[cols]
+        
+        ProfileReport(
+            data,
+            title=f"Outlier Report (BQAT v{version})",
+            explorative=True,
+            correlations={"cramers": {"calculate": False}},
+            html={"navbar_show": True, "style": {"theme": "united"}},
+        ).to_file(report_dir)
+    
+        with open(table_dir, 'w') as f:
+            f.write("""
+                <head>
+                <script
+                src="https://code.jquery.com/jquery-2.2.4.min.js"
+                integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+                crossorigin="anonymous"></script>
+                <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+                        <link href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css" rel="stylesheet">
+                    <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <script>
+
+                    $(document)
+                .ready(function () {
+                    $('table')
+                    .DataTable( {
+                fixedColumns: {
+                        left: 2
+                    }
+                }
+                    );
+                });
+
+                    </script>
+            """)
+            data['file'] = data['file'].map(lambda x: f"file://{cwd}/{x}")
+
+            def make_clickable(val):
+            # target _blank to open new window
+                return '<a target="_blank" href="{}">{}</a>'.format(val, val)
+
+            # f.write(data.to_html(render_links=True))
+            f.write(data.style.format({'file': make_clickable}).background_gradient(axis=0).to_html())
+
+        return {
+            "output": str(table_dir),
+            "report": str(report_dir)
+        }
+
+    else:
+        raise RuntimeError("output csv not fount.")
