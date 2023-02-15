@@ -218,16 +218,16 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
 
     if p.exists() and p.suffix in (".csv", ".CSV"):
         data = pd.read_csv(p)
-        pd.set_option('display.max_colwidth', None)
+        pd.set_option("display.max_colwidth", None)
         if query:
             data = data.query(query).copy()
-        if sort:    
-            data = data.sort_values(sort.split(',')).copy()
+        if sort:
+            data = data.sort_values(sort.split(",")).copy()
         if attributes:
-            cols = attributes.split(',')
-            cols.insert(0, 'file') if 'file' not in cols else None
+            cols = attributes.split(",")
+            cols.insert(0, "file") if "file" not in cols else None
             data = data[cols]
-        
+
         ProfileReport(
             data,
             title=f"Outlier Report (BQAT v{version})",
@@ -235,21 +235,22 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
             correlations={"cramers": {"calculate": False}},
             html={"navbar_show": True, "style": {"theme": "united"}},
         ).to_file(report_dir)
-    
-        with open(table_dir, 'w') as f:
-            f.write("""
+
+        with open(table_dir, "w") as f:
+            f.write(
+                """<!doctype html><html lang=en>           
                 <head>
                 <script
-                src="https://code.jquery.com/jquery-2.2.4.min.js"
-                integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
-                crossorigin="anonymous"></script>
+                    src="https://code.jquery.com/jquery-2.2.4.min.js"
+                    integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+                    crossorigin="anonymous">
+                </script>
                 <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
-                        <link href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css" rel="stylesheet">
-                    <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
+                <link href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css" rel="stylesheet">
+                <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
                 </head>
                 <body>
-                    <script>
-
+                <script>
                     $(document)
                 .ready(function () {
                     $('table')
@@ -260,22 +261,23 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
                 }
                     );
                 });
-
-                    </script>
-            """)
-            data['file'] = data['file'].map(lambda x: f"file://{cwd}/{x}")
+                </script>
+                """
+            )
+            data["file"] = data["file"].map(lambda x: f"file://{cwd}/{x}")
 
             def make_clickable(val):
-            # target _blank to open new window
+                # target _blank to open new window
                 return '<a target="_blank" href="{}">{}</a>'.format(val, val)
 
             # f.write(data.to_html(render_links=True))
-            f.write(data.style.format({'file': make_clickable}).background_gradient(axis=0).to_html())
+            f.write(
+                data.style.format({"file": make_clickable})
+                .background_gradient(axis=0)
+                .to_html()
+            )
 
-        return {
-            "output": str(table_dir),
-            "report": str(report_dir)
-        }
+        return {"output": str(table_dir), "report": str(report_dir)}
 
     else:
         raise RuntimeError("output csv not fount.")
