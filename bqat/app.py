@@ -17,7 +17,7 @@ from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
 
 from bqat import __version__ as version
-from bqat.utils import convert_ram, validate_path, write_csv, write_log, write_report
+from bqat.utils import convert_ram, validate_path, write_csv, write_log, write_report, filter_output
 
 
 def run(
@@ -32,6 +32,10 @@ def run(
     type: list,
     convert: list,
     target: str,
+    attributes: str,
+    query: str,
+    sort: str,
+    cwd: str
 ) -> None:
 
     warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -190,21 +194,63 @@ def run(
 
     try:
         write_report(
-            report_dir, output_dir, f"Biometric Quality Report (BQAT v{version})"
+            report_dir,
+            output_dir,
+            f"Biometric Quality Report (BQAT v{version})"
         )
     except Exception as e:
         click.echo(f"failed to generate report: {str(e)}")
 
+    try:
+        dir = filter_output(
+            output_dir,
+            attributes,
+            query,
+            sort,
+            cwd
+        )
+        outlier_filter = {
+            "Output": dir.get("output"),
+            "Report": dir.get("report")
+        } if dir else False
+    except Exception as e:
+        click.echo(f"failed to apply filter: {str(e)}")
+
     print("\n> Summary:")
     summary = {
-        "File processed": file_count,
         "Total process time": f"{hr}h{mn}m{sc}s",
         "System throughput": f"{file_count/job_timer:.2f} item/s",
-        "Input": f"{input_folder}",
-        "Output": f"{os.path.relpath(output_dir, os.getcwd())}",
-        "Report": f"{report_dir}",
-        "Log": f"{log_dir}",
+        "Assessment Task": {
+            "File processed": file_count,
+            "Input": f"{input_folder}",
+            "Output": f"{os.path.relpath(output_dir, os.getcwd())}",
+            "Report": f"{report_dir}",
+            "Log": f"{log_dir}",
+        }
     }
+    if outlier_filter:
+        summary.update({"Outlier Filter": outlier_filter})
+    Console().print_json(json.dumps(summary))
+    print("\n>> Finished <<\n")
+
+
+def filter(output, attributes, query, sort, cwd):
+    try:
+        dir = filter_output(
+            output,
+            attributes,
+            query,
+            sort,
+            cwd
+        )
+        outlier_filter = {
+            "Output": dir.get("output"),
+            "Report": dir.get("report")
+        } if dir else False
+    except Exception as e:
+        click.echo(f"failed to apply filter: {str(e)}")
+    print("\n> Summary:")
+    summary = {"Outlier Filter": outlier_filter}
     Console().print_json(json.dumps(summary))
     print("\n>> Finished <<\n")
 
@@ -338,10 +384,15 @@ def scan_task(path, output_dir, log_dir, mode, convert, target):
         write_log(log_dir, {"file": path, "task error": str(e)})
         return
 
-    log = result.get("log", {})
-    if log:
+    if log := result.get("log", {}):
         log.update({"file": path})
         write_log(log_dir, log)
+        result.pop("log")
+    if log := result.get("converted", {}):
+        log = {"convert": log}
+        log.update({"file": path})
+        write_log(log_dir, log)
+        result.pop("converted")
     header = False if "error" in list(log.keys()) else True
 
     if result:
