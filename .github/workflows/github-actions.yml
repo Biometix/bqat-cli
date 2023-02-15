@@ -50,7 +50,9 @@ jobs:
       - name: Check out Repository
         uses: actions/checkout@v3
       - name: Pull Test Image
-        run: docker pull ghcr.io/biometix/bqat-cli:test
+        run: |
+          docker pull ghcr.io/biometix/bqat-cli:test
+          docker tag ghcr.io/biometix/bqat-cli:test ghcr.io/biometix/bqat-cli:latest
       - name: Run Test Scripts
         run: ./test.sh
 
