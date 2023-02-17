@@ -108,11 +108,17 @@ def run(
                 for path in files:
                     result = scan(path, mode=mode, source=convert, target=target)
 
-                    log = result.get("log", {})
-                    if log:
+                    header = True
+                    if result.get("converted"):
+                        log = {"convert": result.get("converted")}
                         log.update({"file": path})
                         write_log(log_dir, log)
-                    header = False if "error" in list(log.keys()) else True
+                        result.pop("converted")
+                    if result.get("log"):
+                        log = result.pop("log")
+                        log.update({"file": path})
+                        write_log(log_dir, log)
+                        header = False
 
                     if result:
                         write_csv(output_dir, result, header)
@@ -215,6 +221,7 @@ def run(
         } if dir else False
     except Exception as e:
         click.echo(f"failed to apply filter: {str(e)}")
+        outlier_filter = False
 
     print("\n> Summary:")
     summary = {
@@ -249,9 +256,12 @@ def filter(output, attributes, query, sort, cwd):
         } if dir else False
     except Exception as e:
         click.echo(f"failed to apply filter: {str(e)}")
-    print("\n> Summary:")
-    summary = {"Outlier Filter": outlier_filter}
-    Console().print_json(json.dumps(summary))
+        dir = {}
+        outlier_filter = False
+    if outlier_filter:
+        print("\n> Summary:")
+        summary = {"Outlier Filter": outlier_filter}
+        Console().print_json(json.dumps(summary))
     print("\n>> Finished <<\n")
     return dir
 
@@ -385,16 +395,17 @@ def scan_task(path, output_dir, log_dir, mode, convert, target):
         write_log(log_dir, {"file": path, "task error": str(e)})
         return
 
-    if log := result.get("log", {}):
-        log.update({"file": path})
-        write_log(log_dir, log)
-        result.pop("log")
-    if log := result.get("converted", {}):
-        log = {"convert": log}
+    header = True
+    if result.get("converted"):
+        log = {"convert": result.get("converted")}
         log.update({"file": path})
         write_log(log_dir, log)
         result.pop("converted")
-    header = False if "error" in list(log.keys()) else True
+    if result.get("log"):
+        log = result.pop("log")
+        log.update({"file": path})
+        write_log(log_dir, log)
+        header = False
 
     if result:
         write_csv(output_dir, result, header)
