@@ -53,10 +53,8 @@ def write_csv(path, out="", header=False, init=False):
             write_header = True
             if os.path.exists(path):
                 append = True
-                
                 with open(path) as f:
                     data = f.read()
-
                     f.seek(0, os.SEEK_SET)
                     headline = f.readline()
                     if headline.count("file"):
@@ -211,12 +209,15 @@ def manu() -> dict:
 
 
 def filter_output(filepath, attributes, query, sort, cwd) -> dict:
+    p = Path(filepath)
     if not (attributes or query or sort):
+        return False
+    if not p.is_file() or p.suffix != ".csv":
+        print(f">>> Output [{str(p)}] not valid, please specify a CSV file. exit.")
         return False
     print("\n> Outlier:")
     dt = datetime.datetime.today()
     timestamp = f"{dt.day}-{dt.month}-{dt.year}_{dt.hour}-{dt.minute}-{dt.second}"
-    p = Path(filepath)
     table_dir = p.parent / f"outlier_table_{timestamp}.html"
     report_dir = p.parent / f"outlier_report_{timestamp}.html"
     pd.set_option('mode.chained_assignment', None)
