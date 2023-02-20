@@ -175,33 +175,12 @@ def main(
     target_type = target
 
     mode = mode.casefold()
-    if mode not in ("face", "finger", "fingerprint", "iris", ""):
+    if mode not in ("face", "finger", "fingerprint", "iris", "filter", ""):
         click.echo(f">>> Mode [{mode}] not supported, exit.")
         return
     if mode == "fingerprint": mode = "finger"
 
-    if mode:
-        if benchmarking:
-            benchmark(mode, limit, arm)
-        else:
-            run(
-                mode,
-                input,
-                output,
-                # report,
-                # log,
-                limit,
-                filename,
-                arm,
-                input_type,
-                convert_type,
-                target_type,
-                attributes,
-                query,
-                sort,
-                cwd
-            )
-    else:
+    if mode == "filter":
         filter(
             output,
             attributes,
@@ -209,6 +188,29 @@ def main(
             sort,
             cwd
         )
+        return
+
+    if benchmarking:
+        mode = "face" if not mode else mode
+        benchmark(mode, limit, arm)
+    elif mode:
+        run(
+            mode,
+            input,
+            output,
+            # report,
+            # log,
+            limit,
+            filename,
+            arm,
+            input_type,
+            convert_type,
+            target_type,
+            attributes,
+            query,
+            sort,
+            cwd
+        )      
 
 
 if __name__ == "__main__":

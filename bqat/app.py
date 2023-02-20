@@ -274,11 +274,11 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
     TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
     if mode == "fingerprint" or mode == "finger":
-        samples = f"samples/fingerprint.zip"
+        samples = f"tests/samples/finger.zip"
     elif mode == "face":
-        samples = f"samples/face.zip"
+        samples = f"tests/samples/face.zip"
     elif mode == "iris":
-        samples = f"samples/iris.zip"
+        samples = f"tests/samples/iris.zip"
     else:
         raise RuntimeError(f"{mode} not support")
 
@@ -286,7 +286,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
         z.extractall(samples.rsplit("/", 1)[0] + "/")
     input_dir = samples.rstrip(".zip") + "/"
 
-    batch = 10
+    batch = 99
     file_total = 0
     file_count = 0
     tasks = []
@@ -413,4 +413,7 @@ def scan_task(path, output_dir, log_dir, mode, convert, target):
 
 @ray.remote
 def benchmark_task(path: str, mode: str) -> None:
-    scan(path, mode=mode)
+    if mode == "finger":
+        scan(path, mode=mode, source="na", target="na") # Specify a dummy type so no conversion
+    else:
+        scan(path, mode=mode)
