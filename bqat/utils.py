@@ -100,7 +100,7 @@ def validate_path(path) -> str:
     return path
 
 
-def manu() -> dict:
+def menu() -> dict:
     questions_entry = [
         {
             "type": "list",
