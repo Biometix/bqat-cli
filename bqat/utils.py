@@ -42,32 +42,33 @@ def write_report(report_dir, output_dir, title="Biometric Quality Report (BQAT)"
     ).to_file(report_dir)
 
 
-def write_csv(path, out="", header=False, init=False):
-    if init:
-        if not os.path.exists(path.rsplit("/", 1)[0]):
-            os.makedirs(path.rsplit("/", 1)[0])
+def write_csv(path, out="", seam=False):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.parent / "header.temp"
+
+    if seam:
+        with open(temp) as f:
+            header = f.read().rstrip().split(",")
+        with open(path) as f:
+            data = f.read()
+        with open(path, "w") as f:
+            writer = csv.DictWriter(f, fieldnames=header)
+            writer.writeheader()
+        with open(path, "a") as f:
+            f.write(data)
+        temp.unlink()
     else:
         out = json.loads(pd.json_normalize(out).to_json(orient="index"))["0"]
-
-        if header:
-            write_header = True
-            if os.path.exists(path):
-                append = True
-                with open(path) as f:
-                    data = f.read()
-                    f.seek(0, os.SEEK_SET)
-                    headline = f.readline()
-                    if headline.count("file"):
-                        write_header = False
-            else:
-                append = False
-            if write_header:
-                with open(path, "w") as f:
-                    writer = csv.DictWriter(f, fieldnames=list(out.keys()))
-                    writer.writeheader()
-                if append:
-                    with open(path, "a") as f:
-                        f.write(data)
+        if os.path.exists(temp):
+            with open(temp) as f:
+                header_len = len(f.readline().split(","))
+        else:
+            header_len = 0
+        if header_len < len(list(out.keys())):
+            with open(temp, "w") as f:
+                writer = csv.DictWriter(f, fieldnames=list(out.keys()))
+                writer.writeheader()
 
         with open(path, "a") as f:
             writer = csv.DictWriter(f, fieldnames=list(out.keys()))
@@ -100,7 +101,7 @@ def validate_path(path) -> str:
     return path
 
 
-def manu() -> dict:
+def menu() -> dict:
     questions_entry = [
         {
             "type": "list",
@@ -220,7 +221,7 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
     timestamp = f"{dt.day}-{dt.month}-{dt.year}_{dt.hour}-{dt.minute}-{dt.second}"
     table_dir = p.parent / f"outlier_table_{timestamp}.html"
     report_dir = p.parent / f"outlier_report_{timestamp}.html"
-    pd.set_option('mode.chained_assignment', None)
+    pd.set_option("mode.chained_assignment", None)
 
     if p.exists() and p.suffix in (".csv", ".CSV"):
         data = pd.read_csv(p)
@@ -233,7 +234,7 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
             data = data.query(query)
         if sort and not data.empty:
             data = data.sort_values(sort.split(","))
-        
+
         if not data.empty:
             ProfileReport(
                 data,
@@ -242,7 +243,7 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
                 correlations={"cramers": {"calculate": False}},
                 html={"navbar_show": True, "style": {"theme": "united"}},
             ).to_file(report_dir)
-        
+
             with open(table_dir, "w") as f:
                 f.write(
                     """<!doctype html><html lang=en>           
