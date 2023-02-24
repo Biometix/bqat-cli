@@ -17,7 +17,14 @@ from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
 
 from bqat import __version__ as version
-from bqat.utils import convert_ram, validate_path, write_csv, write_log, write_report, filter_output
+from bqat.utils import (
+    convert_ram,
+    validate_path,
+    write_csv,
+    write_log,
+    write_report,
+    filter_output,
+)
 
 
 def run(
@@ -35,9 +42,8 @@ def run(
     attributes: str,
     query: str,
     sort: str,
-    cwd: str
+    cwd: str,
 ) -> None:
-
     warnings.simplefilter(action="ignore", category=FutureWarning)
     warnings.simplefilter(action="ignore", category=RuntimeWarning)
     warnings.simplefilter(action="ignore", category=UserWarning)
@@ -97,8 +103,6 @@ def run(
     file_count = 0
     tasks = []
 
-    write_csv(output_dir, init=True)
-
     if single:
         with Progress(
             SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
@@ -108,7 +112,7 @@ def run(
                 for path in files:
                     result = scan(path, mode=mode, source=convert, target=target)
 
-                    header = True
+                    log = {}
                     if result.get("converted"):
                         log = {"convert": result.get("converted")}
                         log.update({"file": path})
@@ -118,10 +122,9 @@ def run(
                         log = result.pop("log")
                         log.update({"file": path})
                         write_log(log_dir, log)
-                        header = False
 
-                    if result:
-                        write_csv(output_dir, result, header)
+                    if not log.get("load image"):
+                        write_csv(output_dir, result)
 
                     file_count += 1
                     p.update(task_progress, advance=1)
@@ -171,7 +174,6 @@ def run(
 
         ray.get(not_ready)
 
-    write_log(log_dir, finish=True)
     job_timer = time.time() - job_timer
     sc = job_timer
     mn, sc = divmod(sc, 60)
@@ -179,12 +181,14 @@ def run(
     sc, mn, hr = int(sc), int(mn), int(hr)
 
     try:
+        write_log(log_dir, finish=True)
         log_out = {
             "metadata": {
                 "version": "BQAT v" + version,
                 "datetime": str(dt),
                 "input directory": input_folder,
                 "processed": file_count,
+                "failed": 0,
                 "log": None,
                 "process time": f"{hr}h{mn}m{sc}s",
             }
@@ -193,67 +197,73 @@ def run(
             logs = json.load(f)
             log_out["metadata"].update({"log": len(logs)})
             log_out["log"] = logs
+            log_out["metadata"]["failed"] = (
+                failed_count := len([item for item in logs if item.get("load image")])
+            )
         with open(log_dir, "w") as f:
             json.dump(log_out, f)
     except Exception as e:
         click.echo(f"failed to reload metadata for log: {str(e)}")
+    
+    if file_count == failed_count:
+        output_dir = None
+        report_dir = None
 
     try:
-        write_report(
-            report_dir,
-            output_dir,
-            f"Biometric Quality Report (BQAT v{version})"
-        )
+        if output_dir:
+            write_csv(output_dir, seam=True)
     except Exception as e:
+        click.echo(f"failed to seam output: {str(e)}")
+
+    try:
+        if output_dir:
+            write_report(
+                report_dir, output_dir, f"Biometric Quality Report (BQAT v{version})"
+            )
+        else:
+            report_dir = None
+    except Exception as e:
+        report_dir = None
         click.echo(f"failed to generate report: {str(e)}")
 
     try:
-        dir = filter_output(
-            output_dir,
-            attributes,
-            query,
-            sort,
-            cwd
-        )
-        outlier_filter = {
-            "Output": dir.get("output"),
-            "Report": dir.get("report")
-        } if dir else False
+        if output_dir:
+            dir = filter_output(output_dir, attributes, query, sort, cwd)
+            outlier_filter = (
+                {"Output": dir.get("output"), "Report": dir.get("report")} if dir else False
+            )
+        else:
+            outlier_filter = None
     except Exception as e:
         click.echo(f"failed to apply filter: {str(e)}")
-        outlier_filter = False
+        outlier_filter = None
 
     print("\n> Summary:")
     summary = {
         "Total process time": f"{hr}h{mn}m{sc}s",
         "System throughput": f"{file_count/job_timer:.2f} item/s",
         "Assessment Task": {
-            "File processed": file_count,
-            "Input": f"{input_folder}",
-            "Output": f"{os.path.relpath(output_dir, os.getcwd())}",
-            "Report": f"{report_dir}",
-            "Log": f"{log_dir}",
-        }
+            "Processed": file_count,
+            "Failed": failed_count,
+            "Input": input_folder,
+            "Output": output_dir,
+            "Report": report_dir,
+            "Log": log_dir,
+        },
     }
     if outlier_filter:
         summary.update({"Outlier Filter": outlier_filter})
+    
     Console().print_json(json.dumps(summary))
     print("\n>> Finished <<\n")
 
 
 def filter(output, attributes, query, sort, cwd):
     try:
-        dir = filter_output(
-            output,
-            attributes,
-            query,
-            sort,
-            cwd
+        dir = filter_output(output, attributes, query, sort, cwd)
+        outlier_filter = (
+            {"Output": dir.get("output"), "Report": dir.get("report")} if dir else False
         )
-        outlier_filter = {
-            "Output": dir.get("output"),
-            "Report": dir.get("report")
-        } if dir else False
     except Exception as e:
         click.echo(f"failed to apply filter: {str(e)}")
         dir = {}
@@ -395,7 +405,7 @@ def scan_task(path, output_dir, log_dir, mode, convert, target):
         write_log(log_dir, {"file": path, "task error": str(e)})
         return
 
-    header = True
+    log = {}
     if result.get("converted"):
         log = {"convert": result.get("converted")}
         log.update({"file": path})
@@ -405,15 +415,16 @@ def scan_task(path, output_dir, log_dir, mode, convert, target):
         log = result.pop("log")
         log.update({"file": path})
         write_log(log_dir, log)
-        header = False
 
-    if result:
-        write_csv(output_dir, result, header)
+    if not log.get("load image"):
+        write_csv(output_dir, result)
 
 
 @ray.remote
 def benchmark_task(path: str, mode: str) -> None:
     if mode == "finger":
-        scan(path, mode=mode, source="na", target="na") # Specify a dummy type so no conversion
+        scan(
+            path, mode=mode, source="na", target="na"
+        )  # Specify a dummy type so no conversion
     else:
         scan(path, mode=mode)

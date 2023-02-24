@@ -5,7 +5,7 @@ from rich.text import Text
 from bqat import __name__ as name
 from bqat import __version__ as version
 from bqat.app import benchmark, run, filter
-from bqat.utils import manu
+from bqat.utils import menu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
@@ -144,7 +144,7 @@ def main(
     console.print(title)
 
     if interactive:
-        selections = manu()
+        selections = menu()
         for k, v in selections.items():
             if k == "mode":
                 mode = v
