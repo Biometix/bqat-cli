@@ -42,8 +42,8 @@ COPY bqat/core/bqat_core/misc/haarcascade_smile.xml bqat_core/misc/haarcascade_s
 
 COPY . .
 
-ARG Version
-LABEL BQAT.Version=$Version
+# ARG Version
+# LABEL BQAT.Version=$Version
 
 RUN useradd assessor
 RUN chown -R assessor /app

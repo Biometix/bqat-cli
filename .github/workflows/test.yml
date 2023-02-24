@@ -1,0 +1,27 @@
+name: Test
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types:
+      - completed
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Pull and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Repository
+        uses: actions/checkout@v3
+      - name: Pull Test Image
+        run: |
+          docker pull ghcr.io/biometix/bqat-cli:test
+          docker tag ghcr.io/biometix/bqat-cli:test ghcr.io/biometix/bqat-cli:latest
+      - name: Run Test Scripts
+        run: |
+          mkdir data
+          ./test.sh

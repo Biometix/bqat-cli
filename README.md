@@ -4,10 +4,13 @@ Biometric Quality Assessment Tool (BQAT) - CLI
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
 <img alt="GitHub tag (latest by date)" src="https://img.shields.io/github/v/tag/biometix/bqat-cli">
 <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/biometix/bqat-cli">
-<img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/biometix/bqat-cli/github-actions.yml">
 <img alt="GitHub issues" src="https://img.shields.io/github/issues-raw/biometix/bqat-cli">
 <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/biometix/bqat-cli">
 <img alt="GitHub" src="https://img.shields.io/github/license/biometix/bqat-cli">
+[![Build Status](https://github.com/Biometix/bqat-cli/actions/workflows/build.yml/badge.svg)](https://github.com/Biometix/bqat-cli/actions/workflows/build.yml)
+[![Test Status](https://github.com/Biometix/bqat-cli/actions/workflows/build.yml/badge.svg)](https://github.com/Biometix/bqat-cli/actions/workflows/test.yml)
+[![Release Status](https://github.com/Biometix/bqat-cli/actions/workflows/build.yml/badge.svg)](https://github.com/Biometix/bqat-cli/actions/workflows/release.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 > [biometix.github.io](https://biometix.github.io/)
 
@@ -26,7 +29,6 @@ The face image assessment provides metrics includes head pose, smile detection, 
 ### Iris:
 
 The face image assessment provides various quality attributes, features, and ISO metrics.
-
 
 ## __Contributing__
 
