@@ -42,6 +42,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          push: YES
+          push: true
           tags: ${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
