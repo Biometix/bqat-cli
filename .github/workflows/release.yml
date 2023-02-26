@@ -2,16 +2,13 @@ name: Release
 
 on:
   push:
-      tags:
-        - "v*"
-  workflow_run:
-    workflows: ["Test"]
-    types:
-      - completed
+    tags:
+      - 'v*'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_TAG: work
 
 jobs:
   release:
@@ -21,26 +18,30 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Check out Repository
+      -
+        name: Check out Repository
         uses: actions/checkout@v3
         with:
           submodules: 'true'
-      - name: Login to GitHub Container Registry
+      - 
+        name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract metadata (tags, labels) for Docker
+      - 
+        name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push release image
+      - 
+        name: Build and push release image
         uses: docker/build-push-action@v4
         with:
           context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          push: YES
+          tags: ${{ env.IMAGE_TAG }}
           labels: ${{ steps.meta.outputs.labels }}
