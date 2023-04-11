@@ -40,14 +40,26 @@ RUN wget https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2-2.2.0
 
 COPY bqat/core/bqat_core/misc/haarcascade_smile.xml bqat_core/misc/haarcascade_smile.xml
 
-COPY . .
+COPY bqat/core/bqat_core/misc/NISQA/conda-lock.yml .
 
-# ARG Version
-# LABEL BQAT.Version=$Version
+COPY bqat/core/bqat_core/misc/NISQA /app/
 
 RUN useradd assessor
 RUN chown -R assessor /app
 USER assessor
+
+RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
+RUN ( echo yes ; echo yes ; echo mamba ; echo yes ) | bash Mambaforge-$(uname)-$(uname -m).sh
+SHELL ["/bin/bash", "-l" ,"-c"]
+RUN mamba install --channel=conda-forge --name=base conda-lock
+RUN conda-lock install --name nisqa conda-lock.yml && \
+    mamba clean -afy
+
+COPY bqat ./bqat/
+COPY tests ./tests/
+
+ARG Version
+LABEL BQAT.Version=$Version
 
 ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
 # CMD [ "python3.8 -m bqat --help" ]

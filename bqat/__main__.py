@@ -4,10 +4,10 @@ from rich.text import Text
 
 from bqat import __name__ as name
 from bqat import __version__ as version
-from bqat.app import benchmark, run, filter
+from bqat.app import benchmark, filter, run
 from bqat.utils import menu
 
-INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
+INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2", "wav", "mp3"]
 
 
 @click.command()
@@ -15,19 +15,19 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "--mode",
     "-M",
     default="",
-    help="Specify assessment mode (Fingerprint, Face, Iris).",
+    help="Specify assessment mode (Fingerprint, Face, Iris, Speech).",
 )
 @click.option(
     "--input",
     "-I",
     default="data/",
-    help="Specify input directory."
+    help="Specify input directory.",
 )
 @click.option(
     "--output",
     "-O",
     default="data/output/",
-    help="Specify output directory."
+    help="Specify output directory.",
 )
 # @click.option(
 #     "--report",
@@ -45,76 +45,76 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "-B",
     is_flag=True,
     default=False,
-    help="Run system benchmarking analysis."
+    help="Run system benchmarking analysis.",
 )
 @click.option(
     "--limit",
     "-L",
     type=int,
     default=0,
-    help="Set a limit for number of files to scan."
+    help="Set a limit for number of files to scan.",
 )
 @click.option(
     "--filename",
     "-F",
     default="*",
-    help="Filename pattern to search within the input folder."
+    help="Filename pattern to search within the input folder.",
 )
 @click.option(
     "--search",
     "-S",
     default="",
-    help="Specify file formats to search within the input folder."
+    help="Specify file formats to search within the input folder.",
 )
 @click.option(
     "--convert",
     "-C",
     default="",
-    help="Specify file formats to convert before processing."
+    help="Specify file formats to convert before processing.",
 )
 @click.option(
     "--target",
     "-T",
     default="",
-    help="Specify target format to convert to."
+    help="Specify target format to convert to.",
 )
 @click.option(
     "--arm",
     "-A",
     is_flag=True,
     default=False,
-    help="Disable multithreading (For ARM64 platform)."
+    help="Disable multithreading (For ARM64 platform).",
 )
 @click.option(
     "--interactive",
     "-X",
     is_flag=True,
     default=False,
-    help="Enter terminal interactive ui."
+    help="Enter terminal interactive ui.",
 )
 @click.option(
     "--attributes",
     "-D",
     default="",
-    help="Specify attributes (columns) to investigate."
+    help="Specify attributes (columns) to investigate.",
 )
 @click.option(
     "--query",
     "-Q",
     default="",
-    help="Queries to apply on the attributes."
+    help="Queries to apply on the attributes.",
 )
 @click.option(
     "--sort",
     "-R",
     default="",
-    help="Specify attributes (columns) to sort by."
+    help="Specify attributes (columns) to sort by.",
 )
 @click.option(
     "--cwd",
     "-W",
     default="",
-    help="Specify current working directory for url."
+    help="Specify current working directory for url.",
 )
 def main(
     input,
@@ -133,7 +133,7 @@ def main(
     attributes,
     query,
     sort,
-    cwd
+    cwd,
 ):
     console = Console()
     title = Text("\nWelcome to")
@@ -154,7 +154,7 @@ def main(
                 input = v
             if k == "output":
                 output = v
-                # report = v    
+                # report = v
                 # log = v
             if k == "limit":
                 limit = v
@@ -175,24 +175,21 @@ def main(
     target_type = target
 
     mode = mode.casefold()
-    if mode not in ("face", "finger", "fingerprint", "iris", "filter", ""):
+    if mode not in ("face", "finger", "fingerprint", "iris", "speech", "filter", ""):
         click.echo(f">>> Mode [{mode}] not supported, exit.")
         return
-    if mode == "fingerprint": mode = "finger"
+
+    if mode == "fingerprint":
+        mode = "finger"
 
     if mode == "filter":
-        filter(
-            output,
-            attributes,
-            query,
-            sort,
-            cwd
-        )
+        filter(output, attributes, query, sort, cwd)
         return
 
     if benchmarking:
         mode = "face" if not mode else mode
         benchmark(mode, limit, arm)
+
     elif mode:
         run(
             mode,
@@ -209,8 +206,8 @@ def main(
             attributes,
             query,
             sort,
-            cwd
-        )      
+            cwd,
+        )
 
 
 if __name__ == "__main__":
