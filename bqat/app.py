@@ -3,6 +3,7 @@ import glob
 import json
 import os
 import shutil
+import subprocess
 import time
 import warnings
 from zipfile import ZipFile
@@ -10,21 +11,22 @@ from zipfile import ZipFile
 import click
 import psutil
 import ray
-from .core.bqat_core import scan
-from .core.bqat_core.utils import extend
 from cpuinfo import get_cpu_info
 from rich.console import Console
-from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
+from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, track
 
 from bqat import __version__ as version
 from bqat.utils import (
     convert_ram,
+    filter_output,
     validate_path,
     write_csv,
     write_log,
     write_report,
-    filter_output,
 )
+
+from .core.bqat_core import scan
+from .core.bqat_core.utils import extend
 
 
 def run(
@@ -61,6 +63,24 @@ def run(
         return
     else:
         input_folder = validate_path(input_folder)
+
+    if mode == "speech":
+        env = subprocess.Popen(
+            # ["/bin/bash", "-l", "conda", "activate", "nisqa"],
+            ["/bin/bash", "-l"],
+            # ["conda", "activate", "nisqa"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        # env.stdin.write(b"conda activate nisqa\r\n")
+        # env.stdin.flush()
+        # env.stdin.write(b"python --version\r\n")
+        # env.stdin.flush()
+        # env.stdin.write(b"conda activate nisqa && python --version\n")
+        # env.stdin.flush()
+        # print(env.stdout.read().decode("utf-8"))
+        # outs, errs = env.communicate(b"conda activate nisqa && python --version")
+        # print(outs)
 
     file_total = 0
     for ext in extend(TYPE):
@@ -132,47 +152,75 @@ def run(
                         break
                 if p.finished:
                     break
-
+        Console().log(f"[bold][red]Done!")
     else:
-        with Progress(
-            SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
-        ) as p:
-            task_progress = p.add_task("[cyan]Sending task...", total=file_total)
-            for files in file_globs:
-                for path in files:
-                    tasks.append(
-                        scan_task.remote(
-                            path, output_dir, log_dir, mode, convert, target
+        if mode != "speech":
+            with Progress(
+                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+            ) as p:
+                task_progress = p.add_task("[cyan]Sending task...", total=file_total)
+                for files in file_globs:
+                    for path in files:
+                        tasks.append(
+                            scan_task.remote(
+                                path,
+                                output_dir,
+                                log_dir,
+                                mode,
+                                convert,
+                                target,
+                                env,
+                            )
                         )
-                    )
-                    file_count += 1
-                    p.update(task_progress, advance=1)
+                        file_count += 1
+                        p.update(task_progress, advance=1)
+                        if p.finished:
+                            break
                     if p.finished:
                         break
-                if p.finished:
-                    break
 
-                # # Load limiter
-                # if len(tasks) > 1000:
-                #     ready = len(tasks) - 1000
-                #     ray.wait(tasks, num_returns=ready)
+                    # # Load limiter
+                    # if len(tasks) > 1000:
+                    #     ready = len(tasks) - 1000
+                    #     ray.wait(tasks, num_returns=ready)
 
-        eta_step = 10  # ETA estimation interval
-        ready, not_ready = ray.wait(tasks)
+            eta_step = 10  # ETA estimation interval
+            ready, not_ready = ray.wait(tasks)
 
-        with Progress(
-            SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
-        ) as p:
-            task_progress = p.add_task("[cyan]Scanning...", total=file_total)
-            while not p.finished:
-                if len(not_ready) < eta_step:
-                    p.update(task_progress, completed=file_total)
-                    continue
-                tasks = not_ready
-                ready, not_ready = ray.wait(tasks, num_returns=eta_step)
-                p.update(task_progress, advance=len(ready))
+            with Progress(
+                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+            ) as p:
+                task_progress = p.add_task("[cyan]Scanning...", total=file_total)
+                while not p.finished:
+                    if len(not_ready) < eta_step:
+                        p.update(task_progress, completed=file_total)
+                        continue
+                    tasks = not_ready
+                    ready, not_ready = ray.wait(tasks, num_returns=eta_step)
+                    p.update(task_progress, advance=len(ready))
 
-        ray.get(not_ready)
+            ray.get(not_ready)
+            Console().log(f"[bold][red]Done!")
+        else:
+            try:
+                with Console().status("[bold green]Processing data...\n") as status:
+                    result_list = scan(input_folder, mode=mode, type="folder")
+                    for result in result_list:
+                        file_count += 1
+                        log = {}
+                        if result.get("log"):
+                            log = result.pop("log")
+                            log.update({"file": path})
+                            write_log(log_dir, log)
+                        write_csv(output_dir, result)
+                Console().log(f"[bold][red]Done!")
+            except Exception as e:
+                log = {
+                    "folder": input_folder,
+                    "error": str(e),
+                }
+                file_count = 0
+                write_log(log_dir, log)
 
     job_timer = time.time() - job_timer
     sc = job_timer
@@ -204,7 +252,7 @@ def run(
             json.dump(log_out, f)
     except Exception as e:
         click.echo(f"failed to reload metadata for log: {str(e)}")
-    
+
     if file_count == failed_count:
         output_dir = None
         report_dir = None
@@ -230,7 +278,9 @@ def run(
         if output_dir:
             dir = filter_output(output_dir, attributes, query, sort, cwd)
             outlier_filter = (
-                {"Output": dir.get("output"), "Report": dir.get("report")} if dir else False
+                {"Output": dir.get("output"), "Report": dir.get("report")}
+                if dir
+                else False
             )
         else:
             outlier_filter = None
@@ -253,7 +303,7 @@ def run(
     }
     if outlier_filter:
         summary.update({"Outlier Filter": outlier_filter})
-    
+
     Console().print_json(json.dumps(summary))
     print("\n>> Finished <<\n")
 
@@ -281,7 +331,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
     click.echo(f">> Start Benchmark <<\n")
     click.echo(f"Mode: {mode.upper()}")
 
-    TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
+    TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2", "mp3", "wav"]
 
     if mode == "fingerprint" or mode == "finger":
         samples = f"tests/samples/finger.zip"
@@ -289,6 +339,8 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
         samples = f"tests/samples/face.zip"
     elif mode == "iris":
         samples = f"tests/samples/iris.zip"
+    elif mode == "speech":
+        samples = f"tests/samples/speech.zip"
     else:
         raise RuntimeError(f"{mode} not support")
 
@@ -334,36 +386,48 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
                     break
 
     else:
-        with Progress(
-            SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
-        ) as p:
-            task_progress = p.add_task("[cyan]Sending task...", total=file_total)
-            for files in file_globs:
-                for path in files:
-                    file_count += 1
-                    p.update(task_progress, advance=1)
-                    tasks.append(benchmark_task.remote(path, mode))
+        if mode != "speech":
+            with Progress(
+                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+            ) as p:
+                task_progress = p.add_task("[cyan]Sending task...", total=file_total)
+                for files in file_globs:
+                    for path in files:
+                        file_count += 1
+                        p.update(task_progress, advance=1)
+                        tasks.append(benchmark_task.remote(path, mode))
+                        if p.finished:
+                            break
                     if p.finished:
                         break
-                if p.finished:
-                    break
 
-        eta_step = 10  # ETA estimation interval
-        ready, not_ready = ray.wait(tasks)
+            eta_step = 10  # ETA estimation interval
+            ready, not_ready = ray.wait(tasks)
 
-        with Progress(
-            SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
-        ) as p:
-            task_progress = p.add_task("[cyan]Processing...", total=file_total)
-            while not p.finished:
-                if len(not_ready) < eta_step:
-                    p.update(task_progress, completed=file_total)
-                    continue
-                tasks = not_ready
-                ready, not_ready = ray.wait(tasks, num_returns=eta_step)
-                p.update(task_progress, advance=len(ready))
+            with Progress(
+                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+            ) as p:
+                task_progress = p.add_task("[cyan]Processing...", total=file_total)
+                while not p.finished:
+                    if len(not_ready) < eta_step:
+                        p.update(task_progress, completed=file_total)
+                        continue
+                    tasks = not_ready
+                    ready, not_ready = ray.wait(tasks, num_returns=eta_step)
+                    p.update(task_progress, advance=len(ready))
 
-        ray.get(tasks)
+            ray.get(tasks)
+        else:
+            try:
+                input_file = glob.glob(input_dir + "*.wav")[0]
+                for index in range(batch):
+                    shutil.copy(input_file, input_dir + f"input_file_{index}.wav")
+                with Console().status("[bold green]Processing data...") as status:
+                    out = scan(input_dir, mode=mode, type="folder")
+                    file_count += len(out)
+                Console().log(f"[bold][red]Done!")
+            except Exception as e:
+                print(str(e))
 
     shutil.rmtree(input_dir)
 
