@@ -64,24 +64,6 @@ def run(
     else:
         input_folder = validate_path(input_folder)
 
-    if mode == "speech":
-        env = subprocess.Popen(
-            # ["/bin/bash", "-l", "conda", "activate", "nisqa"],
-            ["/bin/bash", "-l"],
-            # ["conda", "activate", "nisqa"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-        )
-        # env.stdin.write(b"conda activate nisqa\r\n")
-        # env.stdin.flush()
-        # env.stdin.write(b"python --version\r\n")
-        # env.stdin.flush()
-        # env.stdin.write(b"conda activate nisqa && python --version\n")
-        # env.stdin.flush()
-        # print(env.stdout.read().decode("utf-8"))
-        # outs, errs = env.communicate(b"conda activate nisqa && python --version")
-        # print(outs)
-
     file_total = 0
     for ext in extend(TYPE):
         file_total += len(
@@ -130,7 +112,13 @@ def run(
             task_progress = p.add_task("[purple]Scanning...", total=file_total)
             for files in file_globs:
                 for path in files:
-                    result = scan(path, mode=mode, source=convert, target=target)
+                    result = scan(
+                        path,
+                        mode=mode,
+                        source=convert,
+                        target=target,
+                        type="file",
+                    )
 
                     log = {}
                     if result.get("converted"):
@@ -169,7 +157,6 @@ def run(
                                 mode,
                                 convert,
                                 target,
-                                env,
                             )
                         )
                         file_count += 1
@@ -377,7 +364,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
             task_progress = p.add_task("[purple]Processing...", total=file_total)
             for files in file_globs:
                 for path in files:
-                    scan(path, mode=mode)
+                    scan(path, mode=mode, type="file")
                     file_count += 1
                     p.update(task_progress, advance=1)
                     if p.finished:
