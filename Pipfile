@@ -17,6 +17,9 @@ ray = "*"
 pytest = "*"
 
 [dev-packages]
+genbadge = {extras = ["coverage", "tests"], version = "*"}
+pytest-html = "*"
+coverage = "*"
 
 [requires]
 python_version = "3.10"
