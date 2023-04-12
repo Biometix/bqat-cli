@@ -13,11 +13,11 @@ ENV RAY_DISABLE_DOCKER_CPU_WARNING=1
 
 RUN yum -y install epel-release && \
     yum -y groupinstall "Development Tools" && \
-    yum -y install openssl-devel bzip2-devel libffi-devel xz-devel && \
+    yum -y install sqlite-devel openssl-devel bzip2-devel libffi-devel xz-devel && \
     yum -y install wget && \
     wget https://www.python.org/ftp/python/3.8.12/Python-3.8.12.tgz && \
     tar xvf Python-3.8.12.tgz && cd Python-3.8*/ && \
-    ./configure --enable-optimizations && \
+    ./configure --enable-optimizations --enable-loadable-sqlite-extensions && \
     make altinstall
 
 # RUN mkdir -p /root/.deepface/weights
@@ -31,7 +31,7 @@ COPY Pipfile Pipfile.lock /app/
 
 RUN python3.8 -m pip install --upgrade pip && \
     python3.8 -m pip install pipenv && \
-    pipenv requirements > requirements.txt && \
+    pipenv requirements --dev > requirements.txt && \
     python3.8 -m pip install -r requirements.txt
 
 # COPY bqat/core/bqat_core/misc/nfiq2-2.2.0-1.el7.x86_64.rpm /app/misc/
@@ -62,4 +62,4 @@ ARG Version
 LABEL BQAT.Version=$Version
 
 ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
-# CMD [ "python3.8 -m bqat --help" ]
+CMD [ "python3.8 -m bqat --help" ]
