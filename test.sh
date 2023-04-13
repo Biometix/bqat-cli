@@ -1,4 +1,4 @@
 docker run --rm \
     --shm-size=8G \
     ghcr.io/biometix/bqat-cli \
-    "coverage run -m pytest tests"
+    "python3.8 -m pytest tests"
