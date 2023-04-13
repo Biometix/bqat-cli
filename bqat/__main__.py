@@ -7,7 +7,7 @@ from bqat import __version__ as version
 from bqat.app import benchmark, filter, run
 from bqat.utils import menu
 
-INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2", "wav", "mp3"]
+INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
 
 @click.command()
