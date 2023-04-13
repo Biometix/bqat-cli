@@ -50,7 +50,7 @@ def run(
     warnings.simplefilter(action="ignore", category=RuntimeWarning)
     warnings.simplefilter(action="ignore", category=UserWarning)
 
-    TYPE = type
+    TYPE = type if mode != "speech" else ["wav"]
 
     print("> Analyse:")
     click.echo(f"Mode: {mode.upper()}")
@@ -318,7 +318,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
     click.echo(f">> Start Benchmark <<\n")
     click.echo(f"Mode: {mode.upper()}")
 
-    TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2", "mp3", "wav"]
+    TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
     if mode == "fingerprint" or mode == "finger":
         samples = f"tests/samples/finger.zip"
@@ -327,6 +327,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
     elif mode == "iris":
         samples = f"tests/samples/iris.zip"
     elif mode == "speech":
+        TYPE = ["wav"]
         samples = f"tests/samples/speech.zip"
     else:
         raise RuntimeError(f"{mode} not support")
@@ -352,7 +353,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
             for ext in extend(TYPE):
                 file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
 
-    click.echo(f"Input: {input_dir} ({file_total} samples)")
+    click.echo(f"Input: {input_dir} ({file_total} samples)\n")
     if limit:
         click.echo(f"Scan number limit: {limit}")
         file_total = limit
@@ -394,7 +395,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
             with Progress(
                 SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
             ) as p:
-                task_progress = p.add_task("[cyan]Processing...", total=file_total)
+                task_progress = p.add_task("[cyan]Processing...\n", total=file_total)
                 while not p.finished:
                     if len(not_ready) < eta_step:
                         p.update(task_progress, completed=file_total)

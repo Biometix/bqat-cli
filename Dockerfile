@@ -44,6 +44,8 @@ COPY bqat/core/bqat_core/misc/NISQA/conda-lock.yml .
 
 COPY bqat/core/bqat_core/misc/NISQA /app/
 
+COPY tests ./tests/
+
 RUN useradd assessor
 RUN chown -R assessor /app
 USER assessor
@@ -56,7 +58,6 @@ RUN conda-lock install --name nisqa conda-lock.yml && \
     mamba clean -afy
 
 COPY bqat ./bqat/
-COPY tests ./tests/
 
 ARG Version
 LABEL BQAT.Version=$Version
