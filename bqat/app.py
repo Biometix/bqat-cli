@@ -252,9 +252,7 @@ def run(
 
     try:
         if output_dir:
-            write_report(
-                report_dir, output_dir, f"Biometric Quality Report (BQAT v{version})"
-            )
+            write_report(report_dir, output_dir, f"EDA Report (BQAT v{version})")
         else:
             report_dir = None
     except Exception as e:

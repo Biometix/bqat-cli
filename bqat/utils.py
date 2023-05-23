@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 import pandas as pd
-from pandas_profiling import ProfileReport
 from PyInquirer import prompt
+from ydata_profiling import ProfileReport
 
 from bqat import __version__ as version
 
@@ -32,13 +32,20 @@ def write_report(report_dir, output_dir, title="Biometric Quality Report (BQAT)"
     if not os.path.exists(report_dir.rsplit("/", 1)[0]):
         os.makedirs(report_dir.rsplit("/", 1)[0])
     df = pd.read_csv(output_dir)
-    # df.set_index("uuid", inplace=True)
+    df = df.drop(columns="file")
     ProfileReport(
         df,
         title=title,
-        explorative=True,
-        correlations={"cramers": {"calculate": False}},
-        html={"navbar_show": True, "style": {"theme": "united"}},
+        samples=None,
+        correlations=None,
+        html={
+            "navbar_show": True,
+            "style": {
+                "full_width": True,
+                "theme": "simplex",
+                "logo": "https://www.biometix.com/wp-content/uploads/2020/10/logo.png",
+            },
+        },
     ).to_file(report_dir)
 
 
