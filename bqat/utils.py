@@ -10,6 +10,8 @@ from ydata_profiling import ProfileReport
 
 from bqat import __version__ as version
 
+from .core.bqat_core.utils import extend
+
 
 ## Helper functions
 def convert_ram(bytes):
@@ -298,3 +300,10 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
 
     else:
         raise RuntimeError("output csv not fount.")
+
+
+def glob_path(path: str, ext: list, recursive: bool = True) -> list:
+    if recursive:
+        return [i for e in extend(ext) for i in list(Path(path).rglob(f"*.{e}"))]
+    else:
+        return [i for e in extend(ext) for i in list(Path(path).glob(f"*.{e}"))]

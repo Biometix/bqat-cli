@@ -3,9 +3,9 @@ import glob
 import json
 import os
 import shutil
-import subprocess
 import time
 import warnings
+from pathlib import Path
 from zipfile import ZipFile
 
 import click
@@ -13,12 +13,13 @@ import psutil
 import ray
 from cpuinfo import get_cpu_info
 from rich.console import Console
-from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, track
+from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
 
 from bqat import __version__ as version
 from bqat.utils import (
     convert_ram,
     filter_output,
+    glob_path,
     validate_path,
     write_csv,
     write_log,
@@ -58,7 +59,7 @@ def run(
 
     if not os.path.exists(input_folder):
         click.echo(
-            f"Input directory not found. Make sure your local `data/` folder mounted.\n"
+            "Input directory not found. Make sure your local `data/` folder mounted.\n"
         )
         return
     else:
@@ -77,7 +78,7 @@ def run(
             file_total = limit
 
     if file_total == 0:
-        click.echo(f"Exit. No valid input file.\n")
+        click.echo("Exit. No valid input file.\n")
         return
 
     # if log_dir.rfind(".") == -1:
@@ -103,6 +104,7 @@ def run(
         )
 
     file_count = 0
+    failed = 0
     tasks = []
 
     if single:
@@ -140,7 +142,7 @@ def run(
                         break
                 if p.finished:
                     break
-        Console().log(f"[bold][red]Done!")
+        Console().log("[bold][red]Done!")
     else:
         if mode != "speech":
             with Progress(
@@ -187,27 +189,46 @@ def run(
                     p.update(task_progress, advance=len(ready))
 
             ray.get(not_ready)
-            Console().log(f"[bold][red]Done!")
+            Console().log("[bold][red]Done!")
         else:
-            try:
-                with Console().status("[bold green]Processing data...\n") as status:
-                    result_list = scan(input_folder, mode=mode, type="folder")
-                    for result in result_list:
-                        file_count += 1
-                        log = {}
-                        if result.get("log"):
-                            log = result.pop("log")
-                            log.update({"file": path})
+            dir_list = [
+                i
+                for i in Path(input_folder).rglob("*")
+                if (i.is_dir() and glob_path(i, TYPE))
+            ]
+            if glob_path(input_folder, TYPE, recursive=False):
+                dir_list.append(Path(input_folder))
+            with Progress(
+                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+            ) as p:
+                task_progress = p.add_task("[cyan]Scanning...", total=file_total)
+                for dir in dir_list:
+                    ready = 0
+                    try:
+                        output = scan(dir, mode=mode, type="folder")
+                        if output.get("log"):
+                            log = output.pop("log")
+                            log.update({"directory": str(dir)})
                             write_log(log_dir, log)
-                        write_csv(output_dir, result)
-                Console().log(f"[bold][red]Done!")
-            except Exception as e:
-                log = {
-                    "folder": input_folder,
-                    "error": str(e),
-                }
-                file_count = 0
-                write_log(log_dir, log)
+                        result_list = output["results"]
+                        for result in result_list:
+                            ready += 1
+                            write_csv(output_dir, result)
+                    except Exception as e:
+                        ready = len(glob_path(str(dir), TYPE, recursive=False))
+                        failed += ready
+                        error = json.loads(str(e))
+                        log = {
+                            "directory": str(dir),
+                            "file count": ready,
+                            "error": error,
+                        }
+                        write_log(log_dir, log)
+                    p.update(task_progress, advance=ready)
+                    file_count += ready
+                    if p.finished:
+                        break
+            Console().log("[bold][red]Done!")
 
     job_timer = time.time() - job_timer
     sc = job_timer
@@ -234,6 +255,8 @@ def run(
             log_out["log"] = logs
             log_out["metadata"]["failed"] = (
                 failed_count := len([item for item in logs if item.get("load image")])
+                if not failed
+                else failed
             )
         with open(log_dir, "w") as f:
             json.dump(log_out, f)
@@ -313,20 +336,20 @@ def filter(output, attributes, query, sort, cwd):
 
 def benchmark(mode: str, limit: int, single: bool) -> None:
     """Run benchmark to profile the capability of host system."""
-    click.echo(f">> Start Benchmark <<\n")
+    click.echo(">> Start Benchmark <<\n")
     click.echo(f"Mode: {mode.upper()}")
 
     TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
     if mode == "fingerprint" or mode == "finger":
-        samples = f"tests/samples/finger.zip"
+        samples = "tests/samples/finger.zip"
     elif mode == "face":
-        samples = f"tests/samples/face.zip"
+        samples = "tests/samples/face.zip"
     elif mode == "iris":
-        samples = f"tests/samples/iris.zip"
+        samples = "tests/samples/iris.zip"
     elif mode == "speech":
         TYPE = ["wav"]
-        samples = f"tests/samples/speech.zip"
+        samples = "tests/samples/speech.zip"
     else:
         raise RuntimeError(f"{mode} not support")
 
@@ -408,10 +431,10 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
                 input_file = glob.glob(input_dir + "*.wav")[0]
                 for index in range(batch):
                     shutil.copy(input_file, input_dir + f"input_file_{index}.wav")
-                with Console().status("[bold green]Processing data...") as status:
+                with Console().status("[bold green]Processing data...") as _:
                     out = scan(input_dir, mode=mode, type="folder")
                     file_count += len(out)
-                Console().log(f"[bold][red]Done!")
+                Console().log("[bold][red]Done!")
             except Exception as e:
                 print(str(e))
 

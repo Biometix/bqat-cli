@@ -5,7 +5,8 @@ from rich.text import Text
 from bqat import __name__ as name
 from bqat import __version__ as version
 from bqat.app import benchmark, filter, run
-from bqat.utils import menu
+
+# from bqat.utils import menu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
@@ -85,13 +86,13 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     default=False,
     help="Disable multithreading (For ARM64 platform).",
 )
-@click.option(
-    "--interactive",
-    "-X",
-    is_flag=True,
-    default=False,
-    help="Enter terminal interactive ui.",
-)
+# @click.option(
+#     "--interactive",
+#     "-X",
+#     is_flag=True,
+#     default=False,
+#     help="Enter terminal interactive ui.",
+# )
 @click.option(
     "--attributes",
     "-D",
@@ -129,7 +130,7 @@ def main(
     convert,
     target,
     arm,
-    interactive,
+    # interactive,
     attributes,
     query,
     sort,
@@ -143,32 +144,32 @@ def main(
     title.append(f"v{version}\n", style="italic underline")
     console.print(title)
 
-    if interactive:
-        selections = menu()
-        for k, v in selections.items():
-            if k == "mode":
-                mode = v
-            if k == "benchmark":
-                benchmarking = v
-            if k == "input":
-                input = v
-            if k == "output":
-                output = v
-                # report = v
-                # log = v
-            if k == "limit":
-                limit = v
-            if k == "filename":
-                filename = v
-            if k == "arm":
-                arm = v
-            if k == "search":
-                search = v
-            if k == "convert":
-                convert = v
-            if k == "target":
-                target = v
-        click.echo("")
+    # if interactive:
+    #     selections = menu()
+    #     for k, v in selections.items():
+    #         if k == "mode":
+    #             mode = v
+    #         if k == "benchmark":
+    #             benchmarking = v
+    #         if k == "input":
+    #             input = v
+    #         if k == "output":
+    #             output = v
+    #             # report = v
+    #             # log = v
+    #         if k == "limit":
+    #             limit = v
+    #         if k == "filename":
+    #             filename = v
+    #         if k == "arm":
+    #             arm = v
+    #         if k == "search":
+    #             search = v
+    #         if k == "convert":
+    #             convert = v
+    #         if k == "target":
+    #             target = v
+    #     click.echo("")
 
     input_type = search.split() if search else INPUT_TYPE
     convert_type = convert.split()
