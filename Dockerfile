@@ -52,7 +52,7 @@ USER assessor
 
 RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
 RUN ( echo yes ; echo yes ; echo mamba ; echo yes ) | bash Mambaforge-$(uname)-$(uname -m).sh
-SHELL ["/bin/bash", "-l" ,"-c"]
+SHELL [ "/bin/bash", "-l" ,"-c" ]
 RUN mamba install --channel=conda-forge --name=base conda-lock
 RUN conda-lock install --name nisqa conda-lock.yml && \
     mamba clean -afy
