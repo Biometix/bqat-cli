@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM mitre/biqt:latest
+# FROM mitre/biqt:latest
+FROM ghcr.io/mitre/biqt:latest
 
 WORKDIR /app
 
@@ -13,12 +14,19 @@ ENV RAY_DISABLE_DOCKER_CPU_WARNING=1
 
 RUN yum -y install epel-release && \
     yum -y groupinstall "Development Tools" && \
+    yum install -y cmake3 opencv opencv-devel && \
     yum -y install sqlite-devel openssl-devel bzip2-devel libffi-devel xz-devel && \
     yum -y install wget && \
     wget https://www.python.org/ftp/python/3.8.12/Python-3.8.12.tgz && \
     tar xvf Python-3.8.12.tgz && cd Python-3.8*/ && \
     ./configure --enable-optimizations --enable-loadable-sqlite-extensions && \
     make altinstall
+
+COPY bqat/core/bqat_core/misc/BIQT-IRIS /app/biqt-iris/
+
+RUN cd biqt-iris && mkdir build && cd build && \
+    cmake3 -DBIQT_HOME=/usr/local/share/biqt -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j4 && make install
 
 # RUN mkdir -p /root/.deepface/weights
 
@@ -27,10 +35,11 @@ RUN yum -y install epel-release && \
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
 
-COPY Pipfile Pipfile.lock /app/
+COPY Pipfile /app/
 
 RUN python3.8 -m pip install --upgrade pip && \
     python3.8 -m pip install pipenv && \
+    pipenv lock --dev && \
     pipenv requirements --dev > requirements.txt && \
     python3.8 -m pip install -r requirements.txt
 
@@ -53,7 +62,7 @@ USER assessor
 RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
 RUN ( echo yes ; echo yes ; echo mamba ; echo yes ) | bash Mambaforge-$(uname)-$(uname -m).sh
 SHELL [ "/bin/bash", "-l" ,"-c" ]
-RUN mamba install --channel=conda-forge --name=base conda-lock
+RUN mamba install --channel=conda-forge --name=base conda-lock=1.4
 RUN conda-lock install --name nisqa conda-lock.yml && \
     mamba clean -afy
 
