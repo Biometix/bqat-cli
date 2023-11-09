@@ -34,6 +34,8 @@ The tool does require additional shared memory and this can be set by using the 
 
 The `run.sh` is a convenience script for running BQAT.
 
+> `run.ps1` is powershell version of the same script, simply replace "run.sh" with "run.ps1" in the command below.
+
 Example:
 ``` sh
 # Run samples in /input with fingerprint mode as default
