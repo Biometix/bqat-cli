@@ -90,24 +90,7 @@ ENV RAY_DISABLE_DOCKER_CPU_WARNING=1
 
 COPY bqat/core/bqat_core/misc/haarcascade_smile.xml bqat_core/misc/haarcascade_smile.xml
 
-# COPY bqat/core/bqat_core/misc/NISQA/nisqa.yml .
-# COPY bqat/core/bqat_core/misc/NISQA /app/
-
-# RUN apt update && apt -y install curl; curl -L -O "https://github.com/conda-forge/miniforge/releases/download/23.1.0-4/Mambaforge-$(uname)-$(uname -m).sh" && \
-#     ( echo yes ; echo yes ; echo mamba ; echo yes ) | bash Mambaforge-$(uname)-$(uname -m).sh
-# ENV PATH=/app/mamba/bin:${PATH}
-# RUN mamba env create -f nisqa.yml && \
-#     mamba clean -afy
-
 COPY Pipfile /app/
-
-RUN apt update && apt -y install python3 ca-certificates libblas-dev liblapack-dev; \
-    python3 -m pip install --upgrade pip && \
-    python3 -m pip install pipenv && \
-    pipenv lock --dev && \
-    pipenv requirements --dev > requirements.txt && \
-    python3 -m pip uninstall -y pipenv && \
-    python3 -m pip install -r requirements.txt
 
 # RUN mkdir -p /root/.deepface/weights && \
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
@@ -115,11 +98,25 @@ RUN apt update && apt -y install python3 ca-certificates libblas-dev liblapack-d
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
 
-COPY bqat /app/bqat/
+COPY bqat/core/bqat_core/misc/NISQA/conda-lock.yml .
+COPY bqat/core/bqat_core/misc/NISQA /app/
 
-RUN useradd assessor
-RUN chown -R assessor /app
+ENV PATH=/app/mamba/bin:${PATH}
+RUN apt update && apt -y install curl ca-certificates libblas-dev liblapack-dev; curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" && \
+    ( echo yes ; echo yes ; echo mamba ; echo yes ) | bash Mambaforge-$(uname)-$(uname -m).sh && \
+    mamba install --channel=conda-forge --name=base conda-lock=1.4 && \
+    conda-lock install --name nisqa conda-lock.yml && \
+    mamba clean -afy && \
+    useradd assessor && chown -R assessor /app && \
+    python3 -m pip install pipenv && \
+    pipenv lock && \
+    pipenv requirements > requirements.txt && \
+    python3 -m pip uninstall -y pipenv && \
+    python3 -m pip install -r requirements.txt
+
 USER assessor
+
+COPY bqat /app/bqat/
 
 ARG VER_CORE
 ARG VER_API

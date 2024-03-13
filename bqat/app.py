@@ -24,6 +24,7 @@ from bqat.utils import (
     write_csv,
     write_log,
     write_report,
+    generate_report,
 )
 
 from .core.bqat_core import scan
@@ -320,7 +321,7 @@ def filter(output, attributes, query, sort, cwd):
     try:
         dir = filter_output(output, attributes, query, sort, cwd)
         outlier_filter = (
-            {"Output": dir.get("output"), "Report": dir.get("report")} if dir else False
+            {"Table": dir.get("table"), "Output": dir.get("output"), "Report": dir.get("report")} if dir else False
         )
     except Exception as e:
         click.echo(f"failed to apply filter: {str(e)}")
@@ -328,7 +329,7 @@ def filter(output, attributes, query, sort, cwd):
         outlier_filter = False
     if outlier_filter:
         print("\n> Summary:")
-        summary = {"Outlier Filter": outlier_filter}
+        summary = {"Output Filter": outlier_filter}
         Console().print_json(json.dumps(summary))
     print("\n>> Finished <<\n")
     return dir
@@ -501,3 +502,21 @@ def benchmark_task(path: str, mode: str) -> None:
         )  # Specify a dummy type so no conversion
     else:
         scan(path, mode=mode)
+
+
+def report(input, cwd):
+    try:
+        dir = generate_report(input, cwd)
+        report = (
+            {"Table": dir.get("table"), "Report": dir.get("report")} if dir else False
+        )
+    except Exception as e:
+        click.echo(f"failed to generate report: {str(e)}")
+        dir = {}
+        report = False
+    if report:
+        print("\n> Summary:")
+        summary = {"EDA Report": report}
+        Console().print_json(json.dumps(summary))
+    print("\n>> Finished <<\n")
+    return dir

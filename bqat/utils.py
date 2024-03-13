@@ -225,11 +225,12 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
     if not p.is_file() or p.suffix != ".csv":
         print(f">>> Output [{str(p)}] not valid, please specify a CSV file. exit.")
         return False
-    print("\n> Outlier:")
+    print("\n> Filtering:")
     dt = datetime.datetime.today()
     timestamp = f"{dt.day}-{dt.month}-{dt.year}_{dt.hour}-{dt.minute}-{dt.second}"
-    table_dir = p.parent / f"outlier_table_{timestamp}.html"
-    report_dir = p.parent / f"outlier_report_{timestamp}.html"
+    table_dir = p.parent / f"filtered_table_{timestamp}.html"
+    report_dir = p.parent / f"filtered_report_{timestamp}.html"
+    output_dir = p.parent / f"filtered_output_{timestamp}.csv"
     pd.set_option("mode.chained_assignment", None)
 
     if p.exists() and p.suffix in (".csv", ".CSV"):
@@ -243,14 +244,119 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
             data = data.query(query)
         if sort and not data.empty:
             data = data.sort_values(sort.split(","))
+        
+        data.to_csv(output_dir, index=False)
 
         if not data.empty:
             ProfileReport(
                 data,
-                title=f"Outlier Report (BQAT v{version})",
+                title=f"EDA (Filtered) Report (BQAT v{version})",
                 explorative=True,
-                correlations={"cramers": {"calculate": False}},
-                html={"navbar_show": True, "style": {"theme": "united"}},
+                samples=None,
+                # correlations={"cramers": {"calculate": False}},
+                correlations=None,
+                html={
+                    "navbar_show": True,
+                    "style": {
+                        "full_width": True,
+                        "theme": "simplex",
+                        "logo": "https://www.biometix.com/wp-content/uploads/2020/10/logo.png",
+                    },
+                },
+            ).to_file(report_dir)
+
+            with open(table_dir, "w") as f:
+                f.write(
+                    """<!doctype html><html lang=en>           
+                    <head>
+                    <script
+                        src="https://code.jquery.com/jquery-2.2.4.min.js"
+                        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+                        crossorigin="anonymous">
+                    </script>
+                    <script src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+                    <link href="https://cdn.datatables.net/1.13.1/css/jquery.dataTables.min.css" rel="stylesheet">
+                    <link href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" rel="stylesheet">
+                    </head>
+                    <body>
+                    <script>
+                        $(document)
+                    .ready(function () {
+                        $('table')
+                        .DataTable( {
+                    fixedColumns: {
+                            left: 2
+                        }
+                    }
+                        );
+                    });
+                    </script>
+                    """
+                )
+                data["file"] = data["file"].map(lambda x: f"file://{cwd}/{x}")
+
+                def make_clickable(val):
+                    # target _blank to open new window
+                    return '<a target="_blank" href="{}">{}</a>'.format(val, val)
+
+                f.write(
+                    data.style.format({"file": make_clickable})
+                    .background_gradient(axis=0)
+                    .to_html()
+                    # .to_html(render_links=True)
+                )
+        else:
+            return False
+        
+        return {
+            "table": str(table_dir),
+            "report": str(report_dir),
+            "output": str(output_dir)
+        }
+
+    else:
+        raise RuntimeError("output csv not fount.")
+
+
+def glob_path(path: str, ext: list, recursive: bool = True) -> list:
+    if recursive:
+        return [i for e in extend(ext) for i in list(Path(path).rglob(f"*.{e}"))]
+    else:
+        return [i for e in extend(ext) for i in list(Path(path).glob(f"*.{e}"))]
+
+
+def generate_report(filepath, cwd='') -> dict:
+    p = Path(filepath)
+    if not p.is_file() or p.suffix != ".csv":
+        print(f">>> Input [{str(p)}] not valid, please specify a CSV file. exit.")
+        return False
+    print("\n> Reporting:")
+    dt = datetime.datetime.today()
+    timestamp = f"{dt.day}-{dt.month}-{dt.year}_{dt.hour}-{dt.minute}-{dt.second}"
+    table_dir = p.parent / f"reporting_table_{timestamp}.html"
+    report_dir = p.parent / f"reporting_report_{timestamp}.html"
+    pd.set_option("mode.chained_assignment", None)
+
+    if p.exists() and p.suffix in (".csv", ".CSV"):
+        data = pd.read_csv(p)
+        pd.set_option("display.max_colwidth", None)
+
+        if not data.empty:
+            ProfileReport(
+                data,
+                title=f"EDA Report (BQAT v{version})",
+                explorative=True,
+                samples=None,
+                # correlations={"cramers": {"calculate": False}},
+                correlations=None,
+                html={
+                    "navbar_show": True,
+                    "style": {
+                        "full_width": True,
+                        "theme": "simplex",
+                        "logo": "https://www.biometix.com/wp-content/uploads/2020/10/logo.png",
+                    },
+                },
             ).to_file(report_dir)
 
             with open(table_dir, "w") as f:
@@ -296,14 +402,7 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
         else:
             return False
 
-        return {"output": str(table_dir), "report": str(report_dir)}
+        return {"table": str(table_dir), "report": str(report_dir)}
 
     else:
-        raise RuntimeError("output csv not fount.")
-
-
-def glob_path(path: str, ext: list, recursive: bool = True) -> list:
-    if recursive:
-        return [i for e in extend(ext) for i in list(Path(path).rglob(f"*.{e}"))]
-    else:
-        return [i for e in extend(ext) for i in list(Path(path).glob(f"*.{e}"))]
+        raise RuntimeError("input csv not fount.")
