@@ -9,4 +9,4 @@ if ((docker ps 2>&1) -match '^(?!error)'){
 }
 
 # Run BQAT-CLI
-docker run --rm -it --shm-size=8G -v $PWD\data:/app/data ghcr.io/biometix/bqat-cli:latest "python3.8 -m bqat $flags"
+docker run --rm -it --shm-size=8G -v $PWD\data:/app/data ghcr.io/biometix/bqat-cli:latest "python3 -m bqat $flags"

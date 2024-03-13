@@ -16,7 +16,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "--mode",
     "-M",
     default="",
-    help="Specify assessment mode (Fingerprint, Face, Iris, Speech).",
+    help="Specify assessment mode (Fingerprint, Face, Iris).",
 )
 @click.option(
     "--input",
@@ -176,7 +176,7 @@ def main(
     target_type = target
 
     mode = mode.casefold()
-    if mode not in ("face", "finger", "fingerprint", "iris", "speech", "filter", ""):
+    if mode not in ("face", "finger", "fingerprint", "iris", "filter", ""):
         click.echo(f">>> Mode [{mode}] not supported, exit.")
         return
 

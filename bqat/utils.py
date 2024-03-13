@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 import pandas as pd
-from PyInquirer import prompt
+# from PyInquirer import prompt
 from ydata_profiling import ProfileReport
 
 from bqat import __version__ as version
@@ -110,112 +110,112 @@ def validate_path(path) -> str:
     return path
 
 
-def menu() -> dict:
-    questions_entry = [
-        {
-            "type": "list",
-            "name": "mode",
-            "message": "Select biometric modality",
-            "choices": ["Fingerprint", "Face", "Iris"],
-        },
-        {
-            "type": "list",
-            "name": "job",
-            "message": "Select job type",
-            "choices": ["Scan biometric samples", "Benchmark the system"],
-        },
-    ]
+# def menu() -> dict:
+#     questions_entry = [
+#         {
+#             "type": "list",
+#             "name": "mode",
+#             "message": "Select biometric modality",
+#             "choices": ["Fingerprint", "Face", "Iris"],
+#         },
+#         {
+#             "type": "list",
+#             "name": "job",
+#             "message": "Select job type",
+#             "choices": ["Scan biometric samples", "Benchmark the system"],
+#         },
+#     ]
 
-    folders = [item for item in os.listdir("./data") if os.path.isdir(f"./data/{item}")]
+#     folders = [item for item in os.listdir("./data") if os.path.isdir(f"./data/{item}")]
 
-    questions_input = [
-        {
-            "type": "list",
-            "name": "input",
-            "message": "Select input folder",
-            "choices": folders + ["[User Input]"],
-        }
-    ]
+#     questions_input = [
+#         {
+#             "type": "list",
+#             "name": "input",
+#             "message": "Select input folder",
+#             "choices": folders + ["[User Input]"],
+#         }
+#     ]
 
-    questions_enter_input = [
-        {"type": "input", "name": "input", "message": "Enter input path"}
-    ]
+#     questions_enter_input = [
+#         {"type": "input", "name": "input", "message": "Enter input path"}
+#     ]
 
-    questions_start = [
-        {
-            "type": "list",
-            "message": "Do you want to start the job or Proceed to Additional configurations",
-            "name": "start",
-            "choices": ["Start now", "Additional configurations"],
-        },
-    ]
+#     questions_start = [
+#         {
+#             "type": "list",
+#             "message": "Do you want to start the job or Proceed to Additional configurations",
+#             "name": "start",
+#             "choices": ["Start now", "Additional configurations"],
+#         },
+#     ]
 
-    questions_advance = [
-        {
-            "type": "input",
-            "name": "output",
-            "message": "Enter output folder path",
-            "default": "data/output/",
-        },
-        {
-            "type": "input",
-            "name": "filename",
-            "message": "Filename pattern to search (IRIS*, *Left*)",
-            "default": "*",
-        },
-        {
-            "type": "input",
-            "name": "search",
-            "message": "Specify file formats to search within the input folder. (Default: wsq, jpg, jpeg, png, bmp, jp2)",
-            "default": "",
-        },
-        {
-            "type": "input",
-            "name": "convert",
-            "message": "Specify file formats to convert before processing. (Default: jpg, jpeg, bmp, jp2, wsq) [Fingerprint only]",
-            "default": "",
-        },
-        {
-            "type": "input",
-            "name": "target",
-            "message": "Specify target format to convert to. (Default: png)",
-            "default": "",
-        },
-        {
-            "type": "input",
-            "name": "limit",
-            "message": "Enter scan limit number",
-            "default": "NA",
-        },
-        {
-            "type": "confirm",
-            "message": "Do you want to run in compatible mode? (For ARM64 platform)",
-            "name": "arm",
-            "default": False,
-        },
-    ]
+#     questions_advance = [
+#         {
+#             "type": "input",
+#             "name": "output",
+#             "message": "Enter output folder path",
+#             "default": "data/output/",
+#         },
+#         {
+#             "type": "input",
+#             "name": "filename",
+#             "message": "Filename pattern to search (IRIS*, *Left*)",
+#             "default": "*",
+#         },
+#         {
+#             "type": "input",
+#             "name": "search",
+#             "message": "Specify file formats to search within the input folder. (Default: wsq, jpg, jpeg, png, bmp, jp2)",
+#             "default": "",
+#         },
+#         {
+#             "type": "input",
+#             "name": "convert",
+#             "message": "Specify file formats to convert before processing. (Default: jpg, jpeg, bmp, jp2, wsq) [Fingerprint only]",
+#             "default": "",
+#         },
+#         {
+#             "type": "input",
+#             "name": "target",
+#             "message": "Specify target format to convert to. (Default: png)",
+#             "default": "",
+#         },
+#         {
+#             "type": "input",
+#             "name": "limit",
+#             "message": "Enter scan limit number",
+#             "default": "NA",
+#         },
+#         {
+#             "type": "confirm",
+#             "message": "Do you want to run in compatible mode? (For ARM64 platform)",
+#             "name": "arm",
+#             "default": False,
+#         },
+#     ]
 
-    ans = prompt(questions_entry)
+#     ans = prompt(questions_entry)
 
-    if ans.get("job") == "Benchmark the system":
-        ans.pop("job")
-        ans.update({"benchmark": True})
-        return ans
-    else:
-        ans_input = prompt(questions_input)
-        if ans_input.get("input") == "[User Input]":
-            ans.update(prompt(questions_enter_input))
-        else:
-            ans.update({"input": "data/" + ans_input.get("input")})
+#     if ans.get("job") == "Benchmark the system":
+#         ans.pop("job")
+#         ans.update({"benchmark": True})
+#         return ans
+#     else:
+#         ans_input = prompt(questions_input)
+#         if ans_input.get("input") == "[User Input]":
+#             ans.update(prompt(questions_enter_input))
+#         else:
+#             ans.update({"input": "data/" + ans_input.get("input")})
 
-    if prompt(questions_start).get("start") == "Start now":
-        return ans
-    else:
-        ans.update(prompt(questions_advance))
-        if ans["limit"] == "NA":
-            ans["limit"] = 0
+#     if prompt(questions_start).get("start") == "Start now":
+#         return ans
+#     else:
+#         ans.update(prompt(questions_advance))
+#         if ans["limit"] == "NA":
+#             ans["limit"] = 0
 
-    return ans
+#     return ans
 
 
 def filter_output(filepath, attributes, query, sort, cwd) -> dict:
