@@ -4,7 +4,7 @@ from rich.text import Text
 
 from bqat import __name__ as name
 from bqat import __version__ as version
-from bqat.app import benchmark, filter, run
+from bqat.app import benchmark, filter, run, report
 
 # from bqat.utils import menu
 
@@ -22,7 +22,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "--input",
     "-I",
     default="data/",
-    help="Specify input directory.",
+    help="Specify input directory or CSV file for analysis.",
 )
 @click.option(
     "--output",
@@ -176,7 +176,7 @@ def main(
     target_type = target
 
     mode = mode.casefold()
-    if mode not in ("face", "finger", "fingerprint", "iris", "speech", "filter", ""):
+    if mode not in ("", "face", "finger", "fingerprint", "iris", "speech", "filter", "report"):
         click.echo(f">>> Mode [{mode}] not supported, exit.")
         return
 
@@ -184,7 +184,11 @@ def main(
         mode = "finger"
 
     if mode == "filter":
-        filter(output, attributes, query, sort, cwd)
+        filter(input, attributes, query, sort, cwd)
+        return
+    
+    if mode == "report":
+        report(input, cwd)
         return
 
     if benchmarking:
