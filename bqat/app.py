@@ -35,6 +35,7 @@ def run(
     mode: str,
     input_folder: str,
     output_folder: str,
+    reporting: bool,
     # report_dir: str,
     # log_dir: str,
     limit: int,
@@ -330,7 +331,7 @@ def run(
         click.echo(f"failed to seam output: {str(e)}")
 
     try:
-        if output_dir:
+        if output_dir and reporting:
             write_report(report_dir, output_dir, f"EDA Report (BQAT v{version})")
         else:
             report_dir = None
@@ -339,7 +340,7 @@ def run(
         click.echo(f"failed to generate report: {str(e)}")
 
     try:
-        if output_dir:
+        if output_dir and (attributes or query or sort):
             dir = filter_output(output_dir, attributes, query, sort, cwd)
             outlier_filter = (
                 {"Output": dir.get("output"), "Report": dir.get("report")}

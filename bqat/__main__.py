@@ -30,12 +30,12 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     default="data/output/",
     help="Specify output directory.",
 )
-# @click.option(
-#     "--report",
-#     "-R",
-#     default="data/output/",
-#     help="Specify report directory."
-# )
+@click.option(
+    "--report",
+    "-R",
+    default="true",
+    help="Enable reporting."
+)
 # @click.option(
 #     "--log",
 #     "-L",
@@ -107,7 +107,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 )
 @click.option(
     "--sort",
-    "-R",
+    # "-R",
     default="",
     help="Specify attributes (columns) to sort by.",
 )
@@ -126,7 +126,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 def main(
     input,
     output,
-    # report,
+    report,
     # log,
     benchmarking,
     mode,
@@ -150,6 +150,13 @@ def main(
     title.append(" ")
     title.append(f"v{version}\n", style="italic underline")
     console.print(title)
+    
+    if report in ("true", "True", "Yes", "yes"):
+        report = True
+    elif report in ("false", "False", "No", 'no'):
+        report = False
+    else:
+        report = True
 
     # if interactive:
     #     selections = menu()
@@ -207,7 +214,7 @@ def main(
             mode,
             input,
             output,
-            # report,
+            report,
             # log,
             limit,
             filename,
