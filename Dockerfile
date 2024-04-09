@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS build
+FROM ubuntu:20.04 AS build
 
 SHELL ["/bin/bash", "-c"] 
 
@@ -17,7 +17,7 @@ ENV BIQT_COMMIT ${BIQT_COMMIT}
 ARG BIQT_FACE_COMMIT=master
 ENV BIQT_FACE_COMMIT ${BIQT_FACE_COMMIT}
 
-COPY bqat/core/bqat_core/misc/BIQT-IRIS /app/biqt-iris/
+COPY bqat/core/bqat_core/misc/BIQT-Iris /app/biqt-iris/
 
 RUN set -e && \
     apt update && \
@@ -60,18 +60,27 @@ RUN set -e && \
     cd build; \
     cmake -DCMAKE_BUILD_TYPE=Release -DOPENBR_DIR=/opt/openbr ..; \
     make -j${NUM_CORES}; \
-    make install; \
-    cd /app; \
-    git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
-    cd NFIQ2; \
-    mkdir build; \
-    cd build; \
-    cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; \
-    cmake --build . --config Release; \
-    cmake --install .
+    make install
+
+RUN apt install -y python3-pip liblapack-dev; \
+    pip install conan cmake; \
+    cd /app; mkdir ofiq; cd ofiq; \
+    git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
+    cd OFIQ-Project/scripts; \
+    chmod +x *.sh; \
+    ./build.sh
+
+# RUN cd /app; \
+#     git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
+#     cd NFIQ2; \
+#     mkdir build; \
+#     cd build; \
+#     cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; \
+#     cmake --build . --config Release; \
+#     cmake --install .
 
 
-FROM ubuntu:22.04 AS release
+FROM ubuntu:20.04 AS release
 
 WORKDIR /app
 
@@ -88,18 +97,11 @@ ENV MPLCONFIGDIR=/app/temp
 # ENV RAY_USE_MULTIPROCESSING_CPU_COUNT=1
 ENV RAY_DISABLE_DOCKER_CPU_WARNING=1
 
-COPY bqat/core/bqat_core/misc/haarcascade_smile.xml bqat_core/misc/haarcascade_smile.xml
-
-COPY Pipfile /app/
-
-# RUN mkdir -p /root/.deepface/weights && \
-#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
-#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/age_model_weights.h5 -P /root/.deepface/weights/ && \
-#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
-#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
-
+COPY bqat/core/bqat_core/misc/BQAT/haarcascade_smile.xml bqat_core/misc/haarcascade_smile.xml
 COPY bqat/core/bqat_core/misc/NISQA/conda-lock.yml .
 COPY bqat/core/bqat_core/misc/NISQA /app/
+COPY bqat/core/bqat_core/misc/OFIQ /app/OFIQ/
+COPY Pipfile /app/
 
 ENV PATH=/app/mamba/bin:${PATH}
 RUN apt update && apt -y install curl ca-certificates libblas-dev liblapack-dev; curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" && \
@@ -114,9 +116,25 @@ RUN apt update && apt -y install curl ca-certificates libblas-dev liblapack-dev;
     python3 -m pip uninstall -y pipenv && \
     python3 -m pip install -r requirements.txt
 
+RUN cd /app; mkdir misc; cd misc; curl -L -O https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2_2.2.0-1_amd64.deb; \
+    apt install -y ./*amd64.deb
+
+# RUN curl -L -O https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2_2.2.0-1_amd64.deb --create-dirs --output-dir /app/misc/ && \
+#     cd /app/misc; apt install -y ./*amd64.deb
+
+# # RUN mkdir -p /root/.deepface/weights && \
+# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
+# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/age_model_weights.h5 -P /root/.deepface/weights/ && \
+# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
+# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
+
 USER assessor
 
 COPY bqat /app/bqat/
+
+COPY --from=build /app/ofiq/OFIQ-Project/install_x86_64_linux/Release/bin ./OFIQ/bin
+COPY --from=build /app/ofiq/OFIQ-Project/install_x86_64_linux/Release/lib ./OFIQ/lib
+COPY --from=build /app/ofiq/OFIQ-Project/data/models ./OFIQ/models
 
 ARG VER_CORE
 ARG VER_API

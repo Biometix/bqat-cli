@@ -117,6 +117,12 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     default="",
     help="Specify current working directory for url.",
 )
+@click.option(
+    "--engine",
+    "-E",
+    default="bqat",
+    help="Specify alternative processing engine (if available).",
+)
 def main(
     input,
     output,
@@ -135,6 +141,7 @@ def main(
     query,
     sort,
     cwd,
+    engine,
 ):
     console = Console()
     title = Text("\nWelcome to")
@@ -212,6 +219,7 @@ def main(
             query,
             sort,
             cwd,
+            engine,
         )
 
 
