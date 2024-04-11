@@ -50,10 +50,12 @@ def run(
     cwd: str,
     engine: str,
 ) -> None:
-    ray.init(
-        # configure_logging=False,
-        logging_level="error"
-    )
+    # Trying to disable logging, not working in this version
+    # ray.init(
+    #     configure_logging=True,
+    #     logging_level="error",
+    #     log_to_driver=False,
+    # )
 
     warnings.simplefilter(action="ignore", category=FutureWarning)
     warnings.simplefilter(action="ignore", category=RuntimeWarning)

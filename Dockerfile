@@ -1,15 +1,6 @@
-FROM ubuntu:20.04 AS build
+FROM ubuntu:22.04 AS build
 
-SHELL ["/bin/bash", "-c"] 
-
-ARG WITH_BIQT_FACE=ON
-ENV WITH_BIQT_FACE ${WITH_BIQT_FACE}
-
-ARG WITH_BIQT_IRIS=ON
-ENV WITH_BIQT_IRIS ${WITH_BIQT_IRIS}
-
-ARG WITH_BIQT_CONTACT_DETECTOR=ON
-ENV WITH_BIQT_CONTACT_DETECTOR ${WITH_BIQT_CONTACT_DETECTOR}
+SHELL ["/bin/bash", "-c"]
 
 ARG BIQT_COMMIT=master
 ENV BIQT_COMMIT ${BIQT_COMMIT}
@@ -17,13 +8,16 @@ ENV BIQT_COMMIT ${BIQT_COMMIT}
 ARG BIQT_FACE_COMMIT=master
 ENV BIQT_FACE_COMMIT ${BIQT_FACE_COMMIT}
 
-COPY bqat/core/bqat_core/misc/BIQT-Iris /app/biqt-iris/
+# COPY bqat/core/bqat_core/misc/BIQT-Iris /app/biqt-iris/
 
 RUN set -e && \
     apt update && \
     apt upgrade -y; \
-    DEBIAN_FRONTEND=noninteractive apt -y install git less vim cmake g++ curl libopencv-dev libjsoncpp-dev pip qtbase5-dev && \
-    apt -y install cmake build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev; \
+    DEBIAN_FRONTEND=noninteractive apt -y install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev && \
+    apt -y install build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev; \
+    strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so; \
+    curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
+    chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
     echo "BIQT_COMMIT=${BIQT_COMMIT}" ; \
     mkdir /app 2>/dev/null || true; \
     cd /app; \
@@ -37,6 +31,7 @@ RUN set -e && \
     make -j${NUM_CORES}; \
     make install; \
     source /etc/profile.d/biqt.sh; \
+    cd /app; git clone https://github.com/mitre/biqt-iris.git; \
     cd /app/biqt-iris; \
     mkdir build; \
     cd build; \
@@ -60,7 +55,16 @@ RUN set -e && \
     cd build; \
     cmake -DCMAKE_BUILD_TYPE=Release -DOPENBR_DIR=/opt/openbr ..; \
     make -j${NUM_CORES}; \
-    make install
+    make install; \
+    cd /app; \
+    git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
+    cd NFIQ2; \
+    git checkout 2a899239d3d72f302cad859145745e8703e32ab0; \
+    mkdir build; \
+    cd build; \
+    cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; \
+    cmake --build . --config Release; \
+    cmake --install .
 
 RUN apt install -y python3-pip liblapack-dev; \
     pip install conan cmake; \
@@ -70,17 +74,8 @@ RUN apt install -y python3-pip liblapack-dev; \
     chmod +x *.sh; \
     ./build.sh
 
-# RUN cd /app; \
-#     git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
-#     cd NFIQ2; \
-#     mkdir build; \
-#     cd build; \
-#     cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; \
-#     cmake --build . --config Release; \
-#     cmake --install .
 
-
-FROM ubuntu:20.04 AS release
+FROM ubuntu:22.04 AS release
 
 WORKDIR /app
 
@@ -118,17 +113,21 @@ RUN apt update && apt -y install curl ca-certificates libblas-dev liblapack-dev;
     python3 -m pip uninstall -y pipenv && \
     python3 -m pip install -r requirements.txt
 
-RUN cd /app; mkdir misc; cd misc; curl -L -O https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2_2.2.0-1_amd64.deb; \
-    apt install -y ./*amd64.deb
+# RUN cd /app; mkdir misc; cd misc; curl -L -O https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2_2.2.0-1_amd64.deb; \
+#     apt install -y ./*amd64.deb
 
 # RUN curl -L -O https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2_2.2.0-1_amd64.deb --create-dirs --output-dir /app/misc/ && \
 #     cd /app/misc; apt install -y ./*amd64.deb
 
-# # RUN mkdir -p /root/.deepface/weights && \
-# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
-# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/age_model_weights.h5 -P /root/.deepface/weights/ && \
-# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
-# #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
+# RUN mkdir -p /root/.deepface/weights && \
+#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
+#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/age_model_weights.h5 -P /root/.deepface/weights/ && \
+#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
+#     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
+
+# RUN apt update && \
+#     DEBIAN_FRONTEND=noninteractive apt -y install openjdk-17-jre-headless g++ libopencv-core4.5d libopencv-highgui4.5d libopencv-imgcodecs4.5d libopencv-imgproc4.5d libjsoncpp25 libqt5xml5 libqt5sql5  libpython3.10 libopencv-objdetect4.5d libqt5widgets5 libopencv-ml4.5d libopencv-videoio4.5d libpython3.10-dev python3-distutils && \
+#     strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so*
 
 USER assessor
 
