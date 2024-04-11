@@ -4,3 +4,5 @@ __pycache__
 .DS_Store
 
 data/*
+
+bqat/core/bqat_core/misc/OFIQ/*

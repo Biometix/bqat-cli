@@ -19,12 +19,12 @@ from bqat import __version__ as version
 from bqat.utils import (
     convert_ram,
     filter_output,
+    generate_report,
     glob_path,
     validate_path,
     write_csv,
     write_log,
     write_report,
-    generate_report,
 )
 
 from .core.bqat_core import scan
@@ -35,6 +35,7 @@ def run(
     mode: str,
     input_folder: str,
     output_folder: str,
+    reporting: bool,
     # report_dir: str,
     # log_dir: str,
     limit: int,
@@ -47,7 +48,15 @@ def run(
     query: str,
     sort: str,
     cwd: str,
+    engine: str,
 ) -> None:
+    # Trying to disable logging, not working in this version
+    # ray.init(
+    #     configure_logging=True,
+    #     logging_level="error",
+    #     log_to_driver=False,
+    # )
+
     warnings.simplefilter(action="ignore", category=FutureWarning)
     warnings.simplefilter(action="ignore", category=RuntimeWarning)
     warnings.simplefilter(action="ignore", category=UserWarning)
@@ -56,6 +65,8 @@ def run(
 
     print("> Analyse:")
     click.echo(f"Mode: {mode.upper()}")
+    if mode == "face":
+        click.echo(f"Engine: {engine.upper()}")
     job_timer = time.time()
 
     if not os.path.exists(input_folder):
@@ -108,128 +119,175 @@ def run(
     failed = 0
     tasks = []
 
-    if single:
+    if mode == "face" and engine == "ofiq":
         with Progress(
             SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
         ) as p:
             task_progress = p.add_task("[purple]Scanning...", total=file_total)
-            for files in file_globs:
-                for path in files:
-                    result = scan(
-                        path,
-                        mode=mode,
-                        source=convert,
-                        target=target,
-                        type="file",
-                    )
-
-                    log = {}
-                    if result.get("converted"):
-                        log = {"convert": result.get("converted")}
-                        log.update({"file": path})
-                        write_log(log_dir, log)
-                        result.pop("converted")
-                    if result.get("log"):
-                        log = result.pop("log")
-                        log.update({"file": path})
-                        write_log(log_dir, log)
-
-                    if not log.get("load image"):
-                        write_csv(output_dir, result)
-
-                    file_count += 1
-                    p.update(task_progress, advance=1)
-                    if p.finished:
-                        break
+            tasks.append(
+                scan_task.remote(
+                    input_folder,
+                    output_dir,
+                    log_dir,
+                    mode,
+                    convert,
+                    target,
+                    engine,
+                )
+            )
+            _, not_ready = ray.wait(tasks, timeout=3)
+            while len(not_ready) != 0:
+                count = 0
+                if not Path("ofiq.log").exists():
+                    continue
+                with open("ofiq.log") as lines:
+                    count = len([1 for _ in lines])
+                    count //= 34
+                advance = count - file_count
+                if advance > 0:
+                    file_count = count
+                    p.update(task_progress, advance=advance)
+                _, not_ready = ray.wait(not_ready, timeout=3)
                 if p.finished:
                     break
+            file_count = file_total
+            p.update(task_progress, completed=file_count)
+        ray.get(not_ready)
+
         Console().log("[bold][red]Done!")
     else:
-        if mode != "speech":
+        if single:
             with Progress(
                 SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
             ) as p:
-                task_progress = p.add_task("[cyan]Sending task...", total=file_total)
+                task_progress = p.add_task("[purple]Scanning...", total=file_total)
                 for files in file_globs:
                     for path in files:
-                        tasks.append(
-                            scan_task.remote(
-                                path,
-                                output_dir,
-                                log_dir,
-                                mode,
-                                convert,
-                                target,
-                            )
+                        result = scan(
+                            path,
+                            mode=mode,
+                            source=convert,
+                            target=target,
+                            type="file",
+                            engine=engine,
                         )
+
+                        log = {}
+                        if result.get("converted"):
+                            log = {"convert": result.get("converted")}
+                            log.update({"file": path})
+                            write_log(log_dir, log)
+                            result.pop("converted")
+                        if result.get("log"):
+                            log = result.pop("log")
+                            log.update({"file": path})
+                            write_log(log_dir, log)
+
+                        if not log.get("load image"):
+                            write_csv(output_dir, result)
+
                         file_count += 1
                         p.update(task_progress, advance=1)
                         if p.finished:
                             break
                     if p.finished:
                         break
-
-                    # # Load limiter
-                    # if len(tasks) > 1000:
-                    #     ready = len(tasks) - 1000
-                    #     ray.wait(tasks, num_returns=ready)
-
-            eta_step = 10  # ETA estimation interval
-            ready, not_ready = ray.wait(tasks)
-
-            with Progress(
-                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
-            ) as p:
-                task_progress = p.add_task("[cyan]Scanning...", total=file_total)
-                while not p.finished:
-                    if len(not_ready) < eta_step:
-                        p.update(task_progress, completed=file_total)
-                        continue
-                    tasks = not_ready
-                    ready, not_ready = ray.wait(tasks, num_returns=eta_step)
-                    p.update(task_progress, advance=len(ready))
-
-            ray.get(not_ready)
             Console().log("[bold][red]Done!")
         else:
-            dir_list = [
-                i
-                for i in Path(input_folder).rglob("*")
-                if (i.is_dir() and glob_path(i, TYPE))
-            ]
-            if glob_path(input_folder, TYPE, recursive=False):
-                dir_list.append(Path(input_folder))
-            with Progress(
-                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
-            ) as p:
-                task_progress = p.add_task("[cyan]Scanning...", total=file_total)
-                for dir in dir_list:
-                    ready = 0
-                    try:
-                        output = scan(dir, mode=mode, type="folder")
-                        if output.get("log"):
-                            log = output.pop("log")
-                            log.update({"directory": str(dir)})
+            if mode != "speech":
+                with Progress(
+                    SpinnerColumn(),
+                    MofNCompleteColumn(),
+                    *Progress.get_default_columns(),
+                ) as p:
+                    task_progress = p.add_task(
+                        "[cyan]Sending task...", total=file_total
+                    )
+                    for files in file_globs:
+                        for path in files:
+                            tasks.append(
+                                scan_task.remote(
+                                    path,
+                                    output_dir,
+                                    log_dir,
+                                    mode,
+                                    convert,
+                                    target,
+                                    engine,
+                                )
+                            )
+                            file_count += 1
+                            p.update(task_progress, advance=1)
+                            if p.finished:
+                                break
+                        if p.finished:
+                            break
+
+                        # # Load limiter
+                        # if len(tasks) > 1000:
+                        #     ready = len(tasks) - 1000
+                        #     ray.wait(tasks, num_returns=ready)
+
+                eta_step = 10  # ETA estimation interval
+                ready, not_ready = ray.wait(tasks)
+
+                with Progress(
+                    SpinnerColumn(),
+                    MofNCompleteColumn(),
+                    *Progress.get_default_columns(),
+                ) as p:
+                    task_progress = p.add_task("[cyan]Scanning...", total=file_total)
+                    while not p.finished:
+                        if len(not_ready) < eta_step:
+                            p.update(task_progress, completed=file_total)
+                            continue
+                        tasks = not_ready
+                        ready, not_ready = ray.wait(tasks, num_returns=eta_step)
+                        p.update(task_progress, advance=len(ready))
+
+                ray.get(not_ready)
+                Console().log("[bold][red]Done!")
+            else:
+                dir_list = [
+                    i
+                    for i in Path(input_folder).rglob("*")
+                    if (i.is_dir() and glob_path(i, TYPE))
+                ]
+                if glob_path(input_folder, TYPE, recursive=False):
+                    dir_list.append(Path(input_folder))
+                with Progress(
+                    SpinnerColumn(),
+                    MofNCompleteColumn(),
+                    *Progress.get_default_columns(),
+                ) as p:
+                    task_progress = p.add_task("[cyan]Scanning...", total=file_total)
+                    for dir in dir_list:
+                        ready = 0
+                        try:
+                            output = scan(dir, mode=mode, type="folder")
+                            if output.get("log"):
+                                log = output.pop("log")
+                                log.update({"directory": str(dir)})
+                                write_log(log_dir, log)
+                            result_list = output["results"]
+                            for result in result_list:
+                                ready += 1
+                                write_csv(output_dir, result)
+                        except Exception as e:
+                            ready = len(glob_path(str(dir), TYPE, recursive=False))
+                            failed += ready
+                            error = json.loads(str(e))
+                            log = {
+                                "directory": str(dir),
+                                "file count": ready,
+                                "error": error,
+                            }
                             write_log(log_dir, log)
-                        result_list = output["results"]
-                        for result in result_list:
-                            ready += 1
-                            write_csv(output_dir, result)
-                    except Exception as e:
-                        ready = len(glob_path(str(dir), TYPE, recursive=False))
-                        failed += ready
-                        error = json.loads(str(e))
-                        log = {
-                            "directory": str(dir),
-                            "file count": ready,
-                            "error": error,
-                        }
-                        write_log(log_dir, log)
-                    p.update(task_progress, advance=ready)
-                    file_count += ready
-                    if p.finished:
-                        break
-            Console().log("[bold][red]Done!")
+                        p.update(task_progress, advance=ready)
+                        file_count += ready
+                        if p.finished:
+                            break
+                Console().log("[bold][red]Done!")
 
     job_timer = time.time() - job_timer
     sc = job_timer
@@ -275,7 +333,7 @@ def run(
         click.echo(f"failed to seam output: {str(e)}")
 
     try:
-        if output_dir:
+        if output_dir and reporting:
             write_report(report_dir, output_dir, f"EDA Report (BQAT v{version})")
         else:
             report_dir = None
@@ -284,7 +342,7 @@ def run(
         click.echo(f"failed to generate report: {str(e)}")
 
     try:
-        if output_dir:
+        if output_dir and (attributes or query or sort):
             dir = filter_output(output_dir, attributes, query, sort, cwd)
             outlier_filter = (
                 {"Output": dir.get("output"), "Report": dir.get("report")}
@@ -321,7 +379,13 @@ def filter(output, attributes, query, sort, cwd):
     try:
         dir = filter_output(output, attributes, query, sort, cwd)
         outlier_filter = (
-            {"Table": dir.get("table"), "Output": dir.get("output"), "Report": dir.get("report")} if dir else False
+            {
+                "Table": dir.get("table"),
+                "Output": dir.get("output"),
+                "Report": dir.get("report"),
+            }
+            if dir
+            else False
         )
     except Exception as e:
         click.echo(f"failed to apply filter: {str(e)}")
@@ -471,27 +535,45 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
 
 
 @ray.remote
-def scan_task(path, output_dir, log_dir, mode, convert, target):
-    try:
-        result = scan(path, mode=mode, source=convert, target=target)
-    except Exception as e:
-        print(f">>>> Scan task error: {str(e)}")
-        write_log(log_dir, {"file": path, "task error": str(e)})
-        return
+def scan_task(path, output_dir, log_dir, mode, convert, target, engine):
+    if engine != "ofiq":
+        try:
+            result = scan(path, mode=mode, source=convert, target=target, engine=engine)
+        except Exception as e:
+            print(f">>>> Scan task error: {str(e)}")
+            write_log(log_dir, {"file": path, "task error": str(e)})
+            return
 
-    log = {}
-    if result.get("converted"):
-        log = {"convert": result.get("converted")}
-        log.update({"file": path})
-        write_log(log_dir, log)
-        result.pop("converted")
-    if result.get("log"):
-        log = result.pop("log")
-        log.update({"file": path})
-        write_log(log_dir, log)
+        log = {}
+        if result.get("converted"):
+            log = {"convert": result.get("converted")}
+            log.update({"file": path})
+            write_log(log_dir, log)
+            result.pop("converted")
+        if result.get("log"):
+            log = result.pop("log")
+            log.update({"file": path})
+            write_log(log_dir, log)
 
-    if not log.get("load image"):
-        write_csv(output_dir, result)
+        if not log.get("load image"):
+            write_csv(output_dir, result)
+    else:
+        try:
+            result = scan(path, mode=mode, engine=engine)
+        except Exception as e:
+            print(f">>>> Scan task error: {str(e)}")
+            write_log(log_dir, {"folder": path, "task error": str(e)})
+            return
+
+        log = {}
+        if result.get("log"):
+            log = result.pop("log")
+            log.update({"folder": path})
+            write_log(log_dir, log)
+
+        result_list = result.get("results")
+        for result in result_list:
+            write_csv(output_dir, result)
 
 
 @ray.remote

@@ -4,7 +4,9 @@ import json
 import os
 from pathlib import Path
 
+# import numpy as np
 import pandas as pd
+
 # from PyInquirer import prompt
 from ydata_profiling import ProfileReport
 
@@ -33,7 +35,10 @@ def write_report(report_dir, output_dir, title="Biometric Quality Report (BQAT)"
     print("\n> Report:")
     if not os.path.exists(report_dir.rsplit("/", 1)[0]):
         os.makedirs(report_dir.rsplit("/", 1)[0])
-    df = pd.read_csv(output_dir)
+    df = pd.read_csv(
+        output_dir,
+        # dtype=np.float32, # force parsing scientific notation string as number type
+    )
     df = df.drop(columns="file")
     ProfileReport(
         df,
@@ -234,7 +239,10 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
     pd.set_option("mode.chained_assignment", None)
 
     if p.exists() and p.suffix in (".csv", ".CSV"):
-        data = pd.read_csv(p)
+        data = pd.read_csv(
+            p,
+            # dtype=np.float32,
+        )
         pd.set_option("display.max_colwidth", None)
         if attributes and not data.empty:
             cols = attributes.split(",")
@@ -333,12 +341,15 @@ def generate_report(filepath, cwd='') -> dict:
     print("\n> Reporting:")
     dt = datetime.datetime.today()
     timestamp = f"{dt.day}-{dt.month}-{dt.year}_{dt.hour}-{dt.minute}-{dt.second}"
-    table_dir = p.parent / f"reporting_table_{timestamp}.html"
-    report_dir = p.parent / f"reporting_report_{timestamp}.html"
+    table_dir = p.parent / f"eda_table_{timestamp}.html"
+    report_dir = p.parent / f"eda_report_{timestamp}.html"
     pd.set_option("mode.chained_assignment", None)
 
     if p.exists() and p.suffix in (".csv", ".CSV"):
-        data = pd.read_csv(p)
+        data = pd.read_csv(
+            p,
+            # dtype=np.float32,
+        )
         pd.set_option("display.max_colwidth", None)
 
         if not data.empty:
