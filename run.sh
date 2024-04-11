@@ -10,7 +10,7 @@ fi
 
 if [ "$flags" = "--update" -o "$flags" = "update" ]; then
     docker pull bqat-cli
-    # docker bqat-cli | grep image.version
+    docker inspect bqat-cli | grep image.version
 else
     [ ! -d data ] && mkdir data
 
