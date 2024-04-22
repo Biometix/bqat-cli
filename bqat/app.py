@@ -435,9 +435,17 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
 
     if not single:
         file_total += file_total * batch
-        for _ in range(batch):
-            for ext in extend(TYPE):
-                file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
+        if mode != "iris":
+            for _ in range(batch):
+                for ext in extend(TYPE):
+                    file_globs.append(
+                        glob.iglob(input_dir + "**/*." + ext, recursive=True)
+                    )
+        else:
+            for i in range(batch):
+                with ZipFile(samples, "r") as z:
+                    z.extractall(f"{input_dir}batch_{i}/")
+            file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
 
     click.echo(f"Input: {input_dir} ({file_total} samples)\n")
     if limit:
@@ -498,7 +506,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
                     shutil.copy(input_file, input_dir + f"input_file_{index}.wav")
                 with Console().status("[bold green]Processing data...") as _:
                     out = scan(input_dir, mode=mode, type="folder")
-                    file_count += len(out)
+                    file_count += len(out.get("results"))
                 Console().log("[bold][red]Done!")
             except Exception as e:
                 print(str(e))
