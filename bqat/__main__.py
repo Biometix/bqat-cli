@@ -4,7 +4,7 @@ from rich.text import Text
 
 from bqat import __name__ as name
 from bqat import __version__ as version
-from bqat.app import benchmark, filter, run, report
+from bqat.app import benchmark, filter, report, run
 
 # from bqat.utils import menu
 
@@ -31,10 +31,10 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     help="Specify output directory.",
 )
 @click.option(
-    "--report",
+    "--reporting",
     "-R",
     default="true",
-    help="Enable reporting."
+    help="Enable reporting.",
 )
 # @click.option(
 #     "--log",
@@ -126,7 +126,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 def main(
     input,
     output,
-    report,
+    reporting,
     # log,
     benchmarking,
     mode,
@@ -150,13 +150,13 @@ def main(
     title.append(" ")
     title.append(f"v{version}\n", style="italic underline")
     console.print(title)
-    
-    if report in ("true", "True", "Yes", "yes"):
-        report = True
-    elif report in ("false", "False", "No", 'no'):
-        report = False
+
+    if reporting in ("true", "True", "Yes", "yes"):
+        reporting = True
+    elif reporting in ("false", "False", "No", "no"):
+        reporting = False
     else:
-        report = True
+        reporting = True
 
     # if interactive:
     #     selections = menu()
@@ -207,14 +207,14 @@ def main(
 
     if benchmarking:
         mode = "face" if not mode else mode
-        benchmark(mode, limit, arm)
+        benchmark(mode, limit, arm, engine)
 
     elif mode:
         run(
             mode,
             input,
             output,
-            report,
+            reporting,
             # log,
             limit,
             filename,
