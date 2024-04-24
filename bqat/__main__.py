@@ -4,7 +4,7 @@ from rich.text import Text
 
 from bqat import __name__ as name
 from bqat import __version__ as version
-from bqat.app import benchmark, filter, run, report
+from bqat.app import benchmark, filter, preprocess, report, run
 
 # from bqat.utils import menu
 
@@ -16,7 +16,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "--mode",
     "-M",
     default="",
-    help="Specify assessment mode (Fingerprint, Face, Iris, Speech).",
+    help="Specify BQAT running mode (Fingerprint, Face, Iris, Speech).",
 )
 @click.option(
     "--input",
@@ -27,14 +27,14 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 @click.option(
     "--output",
     "-O",
-    default="data/output/",
+    default="",
     help="Specify output directory.",
 )
 @click.option(
-    "--report",
+    "--reporting",
     "-R",
     default="true",
-    help="Enable reporting."
+    help="Enable reporting.",
 )
 # @click.option(
 #     "--log",
@@ -62,22 +62,21 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     help="Filename pattern to search within the input folder.",
 )
 @click.option(
-    "--search",
-    "-S",
+    "--type",
     default="",
-    help="Specify file formats to search within the input folder.",
+    help="Specify file types to process in the input folder ('[type_1],[type_2],[type_3]').",
 )
 @click.option(
     "--convert",
     "-C",
     default="",
-    help="Specify file formats to convert before processing.",
+    help="Specify file formats to convert before processing (fingerprint only, '[type_1],[type_2],[type_3]').",
 )
 @click.option(
     "--target",
     "-T",
     default="",
-    help="Specify target format to convert to.",
+    help="Specify target format to convert to (fingerprint only).",
 )
 @click.option(
     "--arm",
@@ -103,7 +102,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "--query",
     "-Q",
     default="",
-    help="Queries to apply on the attributes.",
+    help="Queries to apply on the attributes ('[pandas query]').",
 )
 @click.option(
     "--sort",
@@ -121,18 +120,29 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "--engine",
     "-E",
     default="bqat",
-    help="Specify alternative processing engine (if available).",
+    help="Specify alternative face processing engine (BQAT, OFIQ, BIQT).",
+)
+@click.option(
+    "--config",
+    default="",
+    help='Configure preprocessing task ("[target format],[target width],[color mode (grayscale, rgb)]").',
+)
+@click.option(
+    "--debugging",
+    is_flag=True,
+    default=False,
+    help="Enable debugging mode (print out runtime logs).",
 )
 def main(
     input,
     output,
-    report,
+    reporting,
     # log,
     benchmarking,
     mode,
     limit,
     filename,
-    search,
+    type,
     convert,
     target,
     arm,
@@ -142,6 +152,8 @@ def main(
     sort,
     cwd,
     engine,
+    config,
+    debugging,
 ):
     console = Console()
     title = Text("\nWelcome to")
@@ -150,13 +162,13 @@ def main(
     title.append(" ")
     title.append(f"v{version}\n", style="italic underline")
     console.print(title)
-    
-    if report in ("true", "True", "Yes", "yes"):
-        report = True
-    elif report in ("false", "False", "No", 'no'):
-        report = False
+
+    if reporting in ("true", "True", "Yes", "yes"):
+        reporting = True
+    elif reporting in ("false", "False", "No", "no"):
+        reporting = False
     else:
-        report = True
+        reporting = True
 
     # if interactive:
     #     selections = menu()
@@ -185,17 +197,29 @@ def main(
     #             target = v
     #     click.echo("")
 
-    input_type = search.split() if search else INPUT_TYPE
-    convert_type = convert.split()
+    input_type = type.split(",") if type else INPUT_TYPE
+    convert_type = convert.split(",")
     target_type = target
 
     mode = mode.casefold()
-    if mode not in ("", "face", "finger", "fingerprint", "iris", "speech", "filter", "report"):
+    if mode not in (
+        "",
+        "face",
+        "finger",
+        "fingerprint",
+        "iris",
+        "speech",
+        "filter",
+        "report",
+        "preprocess",
+    ):
         click.echo(f">>> Mode [{mode}] not supported, exit.")
         return
 
     if mode == "fingerprint":
         mode = "finger"
+    if mode != "finger":
+        input_type.remove("wsq")
 
     if mode == "filter":
         filter(input, attributes, query, sort, cwd)
@@ -205,16 +229,51 @@ def main(
         report(input, cwd)
         return
 
+    if mode == "preprocess":
+        try:
+            config = [i.casefold() for i in config.split(",")]
+            configs = {}
+
+            for item in config:
+                if item in INPUT_TYPE:
+                    configs["target"] = item
+                try:
+                    if 0 < (num := float(item)) <= 10:
+                        configs["frac"] = num
+                    else:
+                        configs["width"] = num
+                except ValueError:
+                    pass
+            if "grayscale" in config or "greyscale" in config:
+                configs["grayscale"] = True
+            elif "rgb" in config:
+                configs["rgb"] = True
+            elif "rgba" in config:
+                configs["rgba"] = True
+
+            if not len(configs):
+                click.echo(
+                    f">>> Failed to parse configuration '{config}': no params found, exit."
+                )
+                return
+        except Exception as e:
+            click.echo(f">>> Failed to parse configuration '{config}': {e}, exit.")
+            return
+        preprocess(input, output, debugging, configs)
+        return
+
+    if not output:
+        output = "data/output/"
+
     if benchmarking:
         mode = "face" if not mode else mode
-        benchmark(mode, limit, arm)
-
+        benchmark(mode, limit, arm, engine)
     elif mode:
         run(
             mode,
             input,
             output,
-            report,
+            reporting,
             # log,
             limit,
             filename,
@@ -227,6 +286,7 @@ def main(
             sort,
             cwd,
             engine,
+            debugging,
         )
 
 

@@ -6,14 +6,17 @@ import shutil
 import time
 import warnings
 from pathlib import Path
+from uuid import uuid4
 from zipfile import ZipFile
 
 import click
 import psutil
 import ray
 from cpuinfo import get_cpu_info
+from PIL import Image, ImageOps
 from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
+from rich.text import Text
 
 from bqat import __version__ as version
 from bqat.utils import (
@@ -49,13 +52,14 @@ def run(
     sort: str,
     cwd: str,
     engine: str,
+    debugging: bool,
 ) -> None:
-    # Trying to disable logging, not working in this version
-    # ray.init(
-    #     configure_logging=True,
-    #     logging_level="error",
-    #     log_to_driver=False,
-    # )
+    if not debugging:
+        ray.init(
+            configure_logging=True,
+            logging_level="error",
+            log_to_driver=False,
+        )
 
     warnings.simplefilter(action="ignore", category=FutureWarning)
     warnings.simplefilter(action="ignore", category=RuntimeWarning)
@@ -63,15 +67,21 @@ def run(
 
     TYPE = type if mode != "speech" else ["wav"]
 
-    print("> Analyse:")
-    click.echo(f"Mode: {mode.upper()}")
+    console = Console()
+    metadata = Text("> Analyse:\n")
+    metadata.append("\nMode: ")
+    metadata.append(mode.upper(), style="bold yellow")
     if mode == "face":
-        click.echo(f"Engine: {engine.upper()}")
+        metadata.append("\nEngine: ")
+        metadata.append(engine.upper(), style="bold yellow")
+    metadata.append("\nInput Type: ")
+    metadata.append(str(TYPE), style="bold yellow")
+
     job_timer = time.time()
 
     if not os.path.exists(input_folder):
         click.echo(
-            "Input directory not found. Make sure your local `data/` folder mounted.\n"
+            "Input directory not found. Check input path and make sure your `data/` folder mounted.\n"
         )
         return
     else:
@@ -82,7 +92,13 @@ def run(
         file_total += len(
             glob.glob(input_folder + f"**/{pattern}." + ext, recursive=True)
         )
-    click.echo(f"Input: {input_folder} ({file_total} samples)\n")
+
+    metadata.append("\nInput Directory: ")
+    metadata.append(input_folder, style="bold yellow")
+    metadata.append(" (")
+    metadata.append(str(file_total), style="bold yellow")
+    metadata.append(" samples)\n")
+    console.print(metadata)
 
     if limit:
         click.echo(f"Scan number limit: {limit}")
@@ -90,7 +106,7 @@ def run(
             file_total = limit
 
     if file_total == 0:
-        click.echo("Exit. No valid input file.\n")
+        click.echo("No valid input file. Exit.\n")
         return
 
     # if log_dir.rfind(".") == -1:
@@ -154,7 +170,8 @@ def run(
             p.update(task_progress, completed=file_count)
         ray.get(not_ready)
 
-        Console().log("[bold][red]Done!")
+        # TODO: locale not configurable, UTC hardcoded.
+        Console().log("[bold][red]Finished!")
     else:
         if single:
             with Progress(
@@ -192,7 +209,7 @@ def run(
                             break
                     if p.finished:
                         break
-            Console().log("[bold][red]Done!")
+            Console().log("[bold][red]Finished!")
         else:
             if mode != "speech":
                 with Progress(
@@ -246,7 +263,7 @@ def run(
                         p.update(task_progress, advance=len(ready))
 
                 ray.get(not_ready)
-                Console().log("[bold][red]Done!")
+                Console().log("[bold][red]Finished!")
             else:
                 dir_list = [
                     i
@@ -287,7 +304,7 @@ def run(
                         file_count += ready
                         if p.finished:
                             break
-                Console().log("[bold][red]Done!")
+                Console().log("[bold][red]Finished!")
 
     job_timer = time.time() - job_timer
     sc = job_timer
@@ -361,7 +378,7 @@ def run(
         "System throughput": f"{file_count/job_timer:.2f} item/s",
         "Assessment Task": {
             "Processed": file_count,
-            "Failed": failed_count,
+            # "Failed": failed_count,
             "Input": input_folder,
             "Output": output_dir,
             "Report": report_dir,
@@ -399,10 +416,21 @@ def filter(output, attributes, query, sort, cwd):
     return dir
 
 
-def benchmark(mode: str, limit: int, single: bool) -> None:
+def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
     """Run benchmark to profile the capability of host system."""
-    click.echo(">> Start Benchmark <<\n")
-    click.echo(f"Mode: {mode.upper()}")
+    ray.init(
+        configure_logging=True,
+        logging_level="error",
+        log_to_driver=False,
+    )
+
+    console = Console()
+    metadata = Text(">> Benchmarking Started <<")
+    metadata.append("\n\nMode: ")
+    metadata.append(mode.upper(), style="bold yellow")
+    if mode == "face":
+        metadata.append("\nEngine: ")
+        metadata.append(engine.upper(), style="bold yellow")
 
     TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
@@ -435,73 +463,134 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
 
     if not single:
         file_total += file_total * batch
-        for _ in range(batch):
-            for ext in extend(TYPE):
-                file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
+        if mode == "face" and engine == "ofiq":
+            for files in file_globs:
+                for path in files:
+                    path = Path(path)
+                    for i in range(batch):
+                        shutil.copy(path, path.parent / f"{i}_{path.name}")
+        elif mode != "iris":
+            for _ in range(batch):
+                for ext in extend(TYPE):
+                    file_globs.append(
+                        glob.iglob(input_dir + "**/*." + ext, recursive=True)
+                    )
+        else:
+            for i in range(batch):
+                with ZipFile(samples, "r") as z:
+                    z.extractall(f"{input_dir}batch_{i}/")
+            file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
 
-    click.echo(f"Input: {input_dir} ({file_total} samples)\n")
+    metadata.append("\nInput: ")
+    metadata.append(input_dir, style="bold yellow")
+    metadata.append(" (")
+    metadata.append(str(file_total), style="bold yellow")
+    metadata.append(" samples)\n")
+    console.print(metadata)
+
     if limit:
         click.echo(f"Scan number limit: {limit}")
         file_total = limit
 
-    if single:
+    if mode == "face" and engine == "ofiq":
         with Progress(
             SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
         ) as p:
-            task_progress = p.add_task("[purple]Processing...", total=file_total)
-            for files in file_globs:
-                for path in files:
-                    scan(path, mode=mode, type="file")
-                    file_count += 1
-                    p.update(task_progress, advance=1)
-                    if p.finished:
-                        break
+            task_progress = p.add_task("[purple]Scanning...", total=file_total)
+            tasks.append(
+                benchmark_task.remote(
+                    input_dir,
+                    mode,
+                    engine,
+                )
+            )
+            _, not_ready = ray.wait(tasks, timeout=3)
+            while len(not_ready) != 0:
+                count = 0
+                if not Path("ofiq.log").exists():
+                    continue
+                with open("ofiq.log") as lines:
+                    count = len([1 for _ in lines])
+                    count //= 34
+                advance = count - file_count
+                if advance > 0:
+                    file_count = count
+                    p.update(task_progress, advance=advance)
+                _, not_ready = ray.wait(not_ready, timeout=3)
                 if p.finished:
                     break
+            file_count = file_total
+            p.update(task_progress, completed=file_count)
+        ray.get(not_ready)
 
+        Console().log("[bold][red]Finished!")
     else:
-        if mode != "speech":
+        if single:
             with Progress(
                 SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
             ) as p:
-                task_progress = p.add_task("[cyan]Sending task...", total=file_total)
+                task_progress = p.add_task("[purple]Processing...", total=file_total)
                 for files in file_globs:
                     for path in files:
+                        scan(path, mode=mode, type="file", engine=engine)
                         file_count += 1
                         p.update(task_progress, advance=1)
-                        tasks.append(benchmark_task.remote(path, mode))
                         if p.finished:
                             break
                     if p.finished:
                         break
 
-            eta_step = 10  # ETA estimation interval
-            ready, not_ready = ray.wait(tasks)
-
-            with Progress(
-                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
-            ) as p:
-                task_progress = p.add_task("[cyan]Processing...\n", total=file_total)
-                while not p.finished:
-                    if len(not_ready) < eta_step:
-                        p.update(task_progress, completed=file_total)
-                        continue
-                    tasks = not_ready
-                    ready, not_ready = ray.wait(tasks, num_returns=eta_step)
-                    p.update(task_progress, advance=len(ready))
-
-            ray.get(tasks)
         else:
-            try:
-                input_file = glob.glob(input_dir + "*.wav")[0]
-                for index in range(batch):
-                    shutil.copy(input_file, input_dir + f"input_file_{index}.wav")
-                with Console().status("[bold green]Processing data...") as _:
-                    out = scan(input_dir, mode=mode, type="folder")
-                    file_count += len(out)
-                Console().log("[bold][red]Done!")
-            except Exception as e:
-                print(str(e))
+            if mode != "speech":
+                with Progress(
+                    SpinnerColumn(),
+                    MofNCompleteColumn(),
+                    *Progress.get_default_columns(),
+                ) as p:
+                    task_progress = p.add_task(
+                        "[cyan]Sending task...", total=file_total
+                    )
+                    for files in file_globs:
+                        for path in files:
+                            file_count += 1
+                            p.update(task_progress, advance=1)
+                            tasks.append(benchmark_task.remote(path, mode, engine))
+                            if p.finished:
+                                break
+                        if p.finished:
+                            break
+
+                eta_step = 10  # ETA estimation interval
+                ready, not_ready = ray.wait(tasks)
+
+                with Progress(
+                    SpinnerColumn(),
+                    MofNCompleteColumn(),
+                    *Progress.get_default_columns(),
+                ) as p:
+                    task_progress = p.add_task(
+                        "[cyan]Processing...\n", total=file_total
+                    )
+                    while not p.finished:
+                        if len(not_ready) < eta_step:
+                            p.update(task_progress, completed=file_total)
+                            continue
+                        tasks = not_ready
+                        ready, not_ready = ray.wait(tasks, num_returns=eta_step)
+                        p.update(task_progress, advance=len(ready))
+
+                ray.get(tasks)
+            else:
+                try:
+                    input_file = glob.glob(input_dir + "*.wav")[0]
+                    for index in range(batch):
+                        shutil.copy(input_file, input_dir + f"input_file_{index}.wav")
+                    with Console().status("[bold green]Processing data...") as _:
+                        out = scan(input_dir, mode=mode, type="folder")
+                        file_count += len(out.get("results"))
+                    Console().log("[bold][red]Finished!")
+                except Exception as e:
+                    print(str(e))
 
     shutil.rmtree(input_dir)
 
@@ -531,7 +620,7 @@ def benchmark(mode: str, limit: int, single: bool) -> None:
     Console().print_json(json.dumps(summary))
     # with open("data/benchmark.json", "w") as f:
     #     json.dump(result, f)
-    print("\n>> Benchmark Finished <<\n")
+    print("\n>> Benchmarking Finished <<\n")
 
 
 @ray.remote
@@ -577,13 +666,13 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine):
 
 
 @ray.remote
-def benchmark_task(path: str, mode: str) -> None:
+def benchmark_task(path: str, mode: str, engine: str) -> None:
     if mode == "finger":
         scan(
             path, mode=mode, source="na", target="na"
         )  # Specify a dummy type so no conversion
     else:
-        scan(path, mode=mode)
+        print(scan(path, mode=mode, engine=engine))
 
 
 def report(input, cwd):
@@ -602,3 +691,164 @@ def report(input, cwd):
         Console().print_json(json.dumps(summary))
     print("\n>> Finished <<\n")
     return dir
+
+
+def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -> str:
+    if not debugging:
+        ray.init(
+            configure_logging=True,
+            logging_level="error",
+            log_to_driver=False,
+        )
+    file_total = 0
+    file_count = 0
+    tasks = []
+    file_globs = []
+    task_timer = time.time()
+    TYPE = config.get("source", ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"])
+
+    if not os.path.exists(input_dir):
+        click.echo(
+            "Input directory not found. Check input path and make sure your `data/` folder mounted.\n"
+        )
+        return
+    else:
+        input_dir = validate_path(input_dir)
+
+    if not output_dir:
+        output_dir = Path(input_dir) / f"{str(uuid4())}"
+
+    for ext in extend(TYPE):
+        file_total += len(glob.glob(input_dir + "**/*." + ext, recursive=True))
+    for ext in extend(TYPE):
+        file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
+
+    console = Console()
+    metadata = Text(">> Preprocessing Task Started <<\n")
+    metadata.append("\nInput: ")
+    metadata.append(input_dir, style="bold yellow")
+    metadata.append(" (")
+    metadata.append(str(file_total), style="bold yellow")
+    metadata.append(" samples)\n")
+
+    configs = 0
+
+    if target := config.get("target"):
+        metadata.append("\nConvert to: ")
+        metadata.append(target.upper(), style="bold yellow")
+        configs += 1
+    if config.get("grayscale"):
+        metadata.append("\nConvert to: ")
+        metadata.append("Grayscale (8-bit pixels, grayscale)", style="bold yellow")
+        configs += 1
+    if config.get("rgb"):
+        metadata.append("\nConvert to: ")
+        metadata.append("RGB (3x8-bit pixels, true color)", style="bold yellow")
+        configs += 1
+    if width := config.get("width"):
+        metadata.append("\nResize by width: ")
+        metadata.append(width, style="bold yellow")
+        configs += 1
+    if frac := config.get("frac"):
+        metadata.append("\nResize by fraction: ")
+        metadata.append(f"{int(frac*100)}%", style="bold yellow")
+        configs += 1
+
+    metadata.append("\n")
+    console.print(metadata)
+
+    if file_total == 0:
+        click.echo("No valid input file. Exit.\n")
+        return
+
+    if configs == 0:
+        click.echo("No preprocessing task specified.")
+        return
+
+    with Progress(
+        SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+    ) as p:
+        task_progress = p.add_task("[cyan]Sending task...", total=file_total)
+        for files in file_globs:
+            for path in files:
+                file_count += 1
+                p.update(task_progress, advance=1)
+                try:
+                    tasks.append(
+                        preprocess_task.remote(
+                            path,
+                            output_dir,
+                            config,
+                        )
+                    )
+                except Exception as e:
+                    click.echo(f"Preprocessing task failed: {e}")
+                if p.finished:
+                    break
+            if p.finished:
+                break
+
+    eta_step = 10  # ETA estimation interval
+    ready, not_ready = ray.wait(tasks)
+
+    with Progress(
+        SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+    ) as p:
+        task_progress = p.add_task("[cyan]Processing...\n", total=file_total)
+        while not p.finished:
+            if len(not_ready) < eta_step:
+                p.update(task_progress, completed=file_total)
+                continue
+            tasks = not_ready
+            ready, not_ready = ray.wait(tasks, num_returns=eta_step)
+            p.update(task_progress, advance=len(ready))
+
+    ray.get(tasks)
+    Console().log("[bold][red]Finished!")
+
+    task_timer = time.time() - task_timer
+    sc = task_timer
+    mn, sc = divmod(sc, 60)
+    hr, mn = divmod(mn, 60)
+    sc, mn, hr = int(sc), int(mn), int(hr)
+
+    print("\n> Summary:")
+    summary = {
+        "File Count": file_count,
+        "Time Elapsed": f"{hr}h{mn}m{sc}s",
+        "Throughput": f"{file_count/task_timer:.2f} item/sec",
+        "Preprocessing Task": {
+            "Processed": file_count,
+            "Output": str(output_dir),
+        },
+    }
+    Console().print_json(json.dumps(summary))
+    print("\n>> Preprocessing Task Finished <<\n")
+
+
+@ray.remote
+def preprocess_task(file: str, output: dir, config: dict) -> None:
+    try:
+        file = Path(file)
+        if not Path(output).exists():
+            Path(output).mkdir(parents=True, exist_ok=True)
+        with Image.open(file) as img:
+            if config.get("grayscale", False):
+                img = ImageOps.grayscale(img)
+                # img = img.convert("L")
+            if config.get("rbg", False):
+                img = img.convert("RGB")
+
+            if width := config.get("width", False):
+                height = int(width * img.height / img.width)
+                img = img.resize((width, height))
+            if frac := config.get("frac", False):
+                img = img.resize((int(img.width * frac), int(img.height * frac)))
+
+            if target := config.get("target", False):
+                processed = Path(output) / f"{file.stem}.{target}"
+            else:
+                processed = Path(output) / file.name
+            img.save(processed)
+    except Exception as e:
+        print(f">>>> Preprocess task error: {str(e)}")
