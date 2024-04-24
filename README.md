@@ -13,6 +13,9 @@ It is available to be run from a docker image.
 + ### Iris
     The face image assessment provides various quality attributes, features, and ISO metrics.
 
++ ### Speech:
+    The speech assessment provides various quality metrics, including naturalness, coloration, noisiness, etc.
+
 ## Installation
 
 This tool is designed to be run as container.
@@ -51,10 +54,10 @@ Example:
 ./run.sh --input data/input/ --mode iris --filename "*FINGER*"
 
 # Search the file with specific format in the input folder
-./run.sh --input data/input/ --mode iris --search "jp2 pgm bmp"
+./run.sh --input data/input/ --mode iris --type "jp2,pgm,bmp"
 
 # Convert the files with specific formats before scanning
-./run.sh --input data/input/ --mode fingerprint --convert "jp2 jpeg"
+./run.sh --input data/input/ --mode fingerprint --convert "jp2,jpeg"
 
 # Specify the file format to convert to
 ./run.sh --input data/input/ --mode fingerprint --target wsq
@@ -63,11 +66,11 @@ Example:
 ./run.sh --input data/input/ --mode face --extension --limit 100000
 ```
 
-Alternate interface:
+<!-- Alternate interface:
 ``` sh
 # Enter interactive CLI
 ./run.sh --interactive
-```
+``` -->
 
 ### Optional Flags
 You can append optional flags as follows:

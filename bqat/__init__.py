@@ -1,2 +1,2 @@
-__version__ = "1.5.2 beta"
+__version__ = "1.6.0 beta"
 __name__ = "Biometric Quality Assessment Tool (BQAT)"
