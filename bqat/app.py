@@ -76,12 +76,15 @@ def run(
         metadata.append(engine.upper(), style="bold yellow")
     metadata.append("\nInput Type: ")
     metadata.append(str(TYPE), style="bold yellow")
+    if mode == "finger" and target:
+        metadata.append("\nTarget Type: ")
+        metadata.append(str(target), style="bold yellow")
 
     job_timer = time.time()
 
     if not os.path.exists(input_folder):
         click.echo(
-            "Input directory not found. Check input path and make sure your `data/` folder mounted.\n"
+            f">>> Input directory not found ({input_folder}). Check input path and make sure your `data/` folder mounted. Exit.\n"
         )
         return
     else:
@@ -106,7 +109,7 @@ def run(
             file_total = limit
 
     if file_total == 0:
-        click.echo("No valid input file. Exit.\n")
+        click.echo(">>> No valid input found. Exit.\n")
         return
 
     # if log_dir.rfind(".") == -1:
@@ -139,7 +142,7 @@ def run(
         with Progress(
             SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
         ) as p:
-            task_progress = p.add_task("[purple]Scanning...", total=file_total)
+            task_progress = p.add_task("[purple]Processing...", total=file_total)
             tasks.append(
                 scan_task.remote(
                     input_folder,
@@ -177,7 +180,7 @@ def run(
             with Progress(
                 SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
             ) as p:
-                task_progress = p.add_task("[purple]Scanning...", total=file_total)
+                task_progress = p.add_task("[purple]Processing...", total=file_total)
                 for files in file_globs:
                     for path in files:
                         result = scan(
@@ -253,7 +256,7 @@ def run(
                     MofNCompleteColumn(),
                     *Progress.get_default_columns(),
                 ) as p:
-                    task_progress = p.add_task("[cyan]Scanning...", total=file_total)
+                    task_progress = p.add_task("[cyan]Processing...", total=file_total)
                     while not p.finished:
                         if len(not_ready) < eta_step:
                             p.update(task_progress, completed=file_total)
@@ -277,7 +280,7 @@ def run(
                     MofNCompleteColumn(),
                     *Progress.get_default_columns(),
                 ) as p:
-                    task_progress = p.add_task("[cyan]Scanning...", total=file_total)
+                    task_progress = p.add_task("[cyan]Processing...", total=file_total)
                     for dir in dir_list:
                         ready = 0
                         try:
@@ -496,7 +499,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
         with Progress(
             SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
         ) as p:
-            task_progress = p.add_task("[purple]Scanning...", total=file_total)
+            task_progress = p.add_task("[purple]Processing...", total=file_total)
             tasks.append(
                 benchmark_task.remote(
                     input_dir,
@@ -709,7 +712,7 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
 
     if not os.path.exists(input_dir):
         click.echo(
-            "Input directory not found. Check input path and make sure your `data/` folder mounted.\n"
+            f">>> Input directory not found ({input_dir}). Check input path and make sure your `data/` folder mounted. Exit.\n"
         )
         return
     else:
@@ -747,10 +750,10 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
         configs += 1
     if width := config.get("width"):
         metadata.append("\nResize by width: ")
-        metadata.append(width, style="bold yellow")
+        metadata.append(f"{str(width)} pixels", style="bold yellow")
         configs += 1
     if frac := config.get("frac"):
-        metadata.append("\nResize by fraction: ")
+        metadata.append("\nResize by percentage: ")
         metadata.append(f"{int(frac*100)}%", style="bold yellow")
         configs += 1
 
@@ -758,11 +761,11 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
     console.print(metadata)
 
     if file_total == 0:
-        click.echo("No valid input file. Exit.\n")
+        click.echo(">>> No valid input file. Exit.\n")
         return
 
     if configs == 0:
-        click.echo("No preprocessing task specified.")
+        click.echo(">>> No preprocessing task specified. Exit.\n")
         return
 
     with Progress(

@@ -93,22 +93,20 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 #     help="Enter terminal interactive ui.",
 # )
 @click.option(
-    "--attributes",
-    "-D",
+    "--columns",
     default="",
-    help="Specify attributes (columns) to investigate.",
+    help="Select columns to investigate.",
 )
 @click.option(
     "--query",
     "-Q",
     default="",
-    help="Queries to apply on the attributes ('[pandas query]').",
+    help="Queries to apply on the columns ('[pandas query]').",
 )
 @click.option(
     "--sort",
-    # "-R",
     default="",
-    help="Specify attributes (columns) to sort by.",
+    help="Specify columns to sort by.",
 )
 @click.option(
     "--cwd",
@@ -129,8 +127,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 )
 @click.option(
     "--debugging",
-    is_flag=True,
-    default=False,
+    default="false",
     help="Enable debugging mode (print out runtime logs).",
 )
 def main(
@@ -147,7 +144,7 @@ def main(
     target,
     arm,
     # interactive,
-    attributes,
+    columns,
     query,
     sort,
     cwd,
@@ -169,6 +166,20 @@ def main(
         reporting = False
     else:
         reporting = True
+
+    if debugging in ("true", "True", "Yes", "yes"):
+        debugging = True
+    elif debugging in ("false", "False", "No", "no"):
+        debugging = False
+    else:
+        debugging = True
+
+    if query and columns:
+        if not len([True for col in columns.split(",") if col in query]):
+            click.echo(
+                f'>>> Query ("{query}") invalid for selected columns ({columns.split(",")}). Exit.\n'
+            )
+            return
 
     # if interactive:
     #     selections = menu()
@@ -197,10 +208,6 @@ def main(
     #             target = v
     #     click.echo("")
 
-    input_type = type.split(",") if type else INPUT_TYPE
-    convert_type = convert.split(",")
-    target_type = target
-
     mode = mode.casefold()
     if mode not in (
         "",
@@ -213,18 +220,26 @@ def main(
         "report",
         "preprocess",
     ):
-        click.echo(f">>> Mode [{mode}] not supported, exit.")
+        click.echo(f">>> Mode [{mode}] not supported. Exit.\n")
         return
 
     if mode == "fingerprint":
         mode = "finger"
-    if mode != "finger":
-        input_type.remove("wsq")
+
+    if type:
+        input_type = type.split(",")
+    else:
+        input_type = INPUT_TYPE
+        if mode != "finger":
+            input_type.remove("wsq")
+
+    convert_type = convert.split(",") if convert else []
+    target_type = target
 
     if mode == "filter":
-        filter(input, attributes, query, sort, cwd)
+        filter(input, columns, query, sort, cwd)
         return
-    
+
     if mode == "report":
         report(input, cwd)
         return
@@ -241,7 +256,7 @@ def main(
                     if 0 < (num := float(item)) <= 10:
                         configs["frac"] = num
                     else:
-                        configs["width"] = num
+                        configs["width"] = int(num)
                 except ValueError:
                     pass
             if "grayscale" in config or "greyscale" in config:
@@ -253,11 +268,11 @@ def main(
 
             if not len(configs):
                 click.echo(
-                    f">>> Failed to parse configuration '{config}': no params found, exit."
+                    f">>> Failed to parse configuration '{config}': no params found. Exit.\n"
                 )
                 return
         except Exception as e:
-            click.echo(f">>> Failed to parse configuration '{config}': {e}, exit.")
+            click.echo(f">>> Failed to parse configuration '{config}': {e}. Exit.\n")
             return
         preprocess(input, output, debugging, configs)
         return
@@ -281,7 +296,7 @@ def main(
             input_type,
             convert_type,
             target_type,
-            attributes,
+            columns,
             query,
             sort,
             cwd,
