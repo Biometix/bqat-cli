@@ -1,24 +1,32 @@
 [[source]]
 url = "https://pypi.org/simple"
-verify_ssl = false
+verify_ssl = true
 name = "pypi"
 
+[[source]]
+url = "https://download.pytorch.org/whl/cpu"
+verify_ssl = true
+name = "downloadpytorch"
+
 [packages]
-mediapipe = "0.10.10"
+torch = {version = "*", index = "downloadpytorch"}
+mediapipe = "*"
 click = "*"
 rich = "*"
 psutil = "*"
 py-cpuinfo = "*"
 wsq = "*"
 ray = "*"
-ydata-profiling = "*"
+ydata-profiling = "4.12.2"
 imutils = "*"
+librosa = "*"
+webcolors = "*"
 
 [dev-packages]
-genbadge = {extras = ["coverage", "tests"], version = "*"}
+pytest = "*"
 pytest-html = "*"
 coverage = "*"
-pytest = "*"
+genbadge = {extras = ["coverage", "tests"], version = "*"}
 
 [requires]
 python_version = "3.10"

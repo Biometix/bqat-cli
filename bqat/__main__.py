@@ -1,3 +1,5 @@
+import asyncio
+
 import click
 from rich.console import Console
 from rich.text import Text
@@ -33,7 +35,8 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 @click.option(
     "--reporting",
     "-R",
-    default="true",
+    is_flag=True,
+    default=False,
     help="Enable reporting.",
 )
 # @click.option(
@@ -115,10 +118,20 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     help="Specify current working directory for url.",
 )
 @click.option(
+    "--batch",
+    default=30,
+    help="Fusion mode processing batch size.",
+)
+@click.option(
+    "--fusion",
+    default=6,
+    help="Specify engine code for fusion mode (BQAT:4, OFIQ:2, BIQT:1).",
+)
+@click.option(
     "--engine",
     "-E",
     default="bqat",
-    help="Specify alternative face processing engine (BQAT, OFIQ, BIQT).",
+    help="Specify alternative face processing engine (BQAT, OFIQ, BIQT, Fusion).",
 )
 @click.option(
     "--config",
@@ -127,7 +140,8 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 )
 @click.option(
     "--debugging",
-    default="false",
+    is_flag=True,
+    default=False,
     help="Enable debugging mode (print out runtime logs).",
 )
 def main(
@@ -148,6 +162,8 @@ def main(
     query,
     sort,
     cwd,
+    batch,
+    fusion,
     engine,
     config,
     debugging,
@@ -159,20 +175,6 @@ def main(
     title.append(" ")
     title.append(f"v{version}\n", style="italic underline")
     console.print(title)
-
-    if reporting in ("true", "True", "Yes", "yes"):
-        reporting = True
-    elif reporting in ("false", "False", "No", "no"):
-        reporting = False
-    else:
-        reporting = True
-
-    if debugging in ("true", "True", "Yes", "yes"):
-        debugging = True
-    elif debugging in ("false", "False", "No", "no"):
-        debugging = False
-    else:
-        debugging = True
 
     if query and columns:
         if not len([True for col in columns.split(",") if col in query]):
@@ -278,30 +280,34 @@ def main(
         return
 
     if not output:
-        output = "data/output/"
+        output = "data/results/"
 
     if benchmarking:
         mode = "face" if not mode else mode
         benchmark(mode, limit, arm, engine)
     elif mode:
-        run(
-            mode,
-            input,
-            output,
-            reporting,
-            # log,
-            limit,
-            filename,
-            arm,
-            input_type,
-            convert_type,
-            target_type,
-            columns,
-            query,
-            sort,
-            cwd,
-            engine,
-            debugging,
+        asyncio.run(
+            run(
+                mode,
+                input,
+                output,
+                reporting,
+                # log,
+                limit,
+                filename,
+                arm,
+                input_type,
+                convert_type,
+                target_type,
+                columns,
+                query,
+                sort,
+                cwd,
+                batch,
+                fusion,
+                engine,
+                debugging,
+            )
         )
 
 

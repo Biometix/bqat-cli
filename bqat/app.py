@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import glob
 import json
@@ -15,26 +16,27 @@ import ray
 from cpuinfo import get_cpu_info
 from PIL import Image, ImageOps
 from rich.console import Console
-from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn
+from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, TimeElapsedColumn
 from rich.text import Text
 
 from bqat import __version__ as version
+from bqat.utils import filter_output  # write_report,
 from bqat.utils import (
     convert_ram,
-    filter_output,
+    fix_filepath,
     generate_report,
     glob_path,
+    split_input_folder,
     validate_path,
     write_csv,
     write_log,
-    write_report,
 )
 
 from .core.bqat_core import scan
 from .core.bqat_core.utils import extend
 
 
-def run(
+async def run(
     mode: str,
     input_folder: str,
     output_folder: str,
@@ -51,6 +53,8 @@ def run(
     query: str,
     sort: str,
     cwd: str,
+    batch: int,
+    fusion: int,
     engine: str,
     debugging: bool,
 ) -> None:
@@ -92,9 +96,12 @@ def run(
 
     file_total = 0
     for ext in extend(TYPE):
-        file_total += len(
-            glob.glob(input_folder + f"**/{pattern}." + ext, recursive=True)
-        )
+        if mode == "face" and engine == "ofiq":
+            file_total += len(glob.glob(input_folder + f"/{pattern}." + ext))
+        else:
+            file_total += len(
+                glob.glob(input_folder + f"**/{pattern}." + ext, recursive=True)
+            )
 
     metadata.append("\nInput Directory: ")
     metadata.append(input_folder, style="bold yellow")
@@ -122,9 +129,9 @@ def run(
     dt = datetime.datetime.today()
     timestamp = f"{dt.day}-{dt.month}-{dt.year}_{dt.hour}-{dt.minute}-{dt.second}"
     output_folder = validate_path(output_folder)
-    output_dir = output_folder + f"output_{mode}_{timestamp}.csv"
-    log_dir = output_folder + f"log_{mode}_{timestamp}.json"
-    report_dir = output_folder + f"report_{mode}_{timestamp}.html"
+    output_dir = output_folder + f"output_{mode}_{engine}_{timestamp}.csv"
+    log_dir = output_folder + f"log_{mode}_{engine}_{timestamp}.json"
+    report_dir = output_folder + f"report_{mode}_{engine}_{timestamp}.html"
 
     write_log(log_dir, init=True)
 
@@ -138,47 +145,60 @@ def run(
     failed = 0
     tasks = []
 
-    if mode == "face" and engine == "ofiq":
+    if mode == "speech" or (mode == "face" and engine in ("ofiq", "fusion")):
+        with Console().status("Prepare input folders..."):
+            temp_folder = f"temp/{int(time.time())}"
+            Path(temp_folder).mkdir()
+            input_folders = split_input_folder(
+                input_folder=input_folder,
+                temp_folder=temp_folder,
+                exts=TYPE,
+                batch_size=batch,
+                pattern=pattern,
+            )
+
         with Progress(
-            SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+            SpinnerColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            *Progress.get_default_columns(),
         ) as p:
             task_progress = p.add_task("[purple]Processing...", total=file_total)
-            tasks.append(
-                scan_task.remote(
-                    input_folder,
-                    output_dir,
-                    log_dir,
-                    mode,
-                    convert,
-                    target,
-                    engine,
+            for folder in input_folders:
+                tasks.append(
+                    scan_task.remote(
+                        folder,
+                        output_dir,
+                        log_dir,
+                        mode,
+                        convert,
+                        target,
+                        engine,
+                        fusion,
+                    )
                 )
-            )
-            _, not_ready = ray.wait(tasks, timeout=3)
-            while len(not_ready) != 0:
-                count = 0
-                if not Path("ofiq.log").exists():
-                    continue
-                with open("ofiq.log") as lines:
-                    count = len([1 for _ in lines])
-                    count //= 34
-                advance = count - file_count
-                if advance > 0:
-                    file_count = count
-                    p.update(task_progress, advance=advance)
-                _, not_ready = ray.wait(not_ready, timeout=3)
-                if p.finished:
-                    break
-            file_count = file_total
-            p.update(task_progress, completed=file_count)
-        ray.get(not_ready)
-
-        # TODO: locale not configurable, UTC hardcoded.
-        Console().log("[bold][red]Finished!")
+                not_ready = True
+                while not_ready:
+                    ready, not_ready = ray.wait(tasks, timeout=0.1)
+                    await asyncio.sleep(1)
+                if ray.get(ready)[0]:
+                    file_count += batch
+                    if file_count > file_total:
+                        batch = file_total - file_count + batch
+                        file_count = file_total
+                    p.update(task_progress, advance=batch)
+                else:
+                    failed += batch
+                tasks = []
+            shutil.rmtree(temp_folder)
+        Console().print("\n[bold][red]Finished!")
     else:
         if single:
             with Progress(
-                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+                SpinnerColumn(),
+                MofNCompleteColumn(),
+                TimeElapsedColumn(),
+                *Progress.get_default_columns(),
             ) as p:
                 task_progress = p.add_task("[purple]Processing...", total=file_total)
                 for files in file_globs:
@@ -212,12 +232,13 @@ def run(
                             break
                     if p.finished:
                         break
-            Console().log("[bold][red]Finished!")
+            Console().print("\n[bold][red]Finished!")
         else:
             if mode != "speech":
                 with Progress(
                     SpinnerColumn(),
                     MofNCompleteColumn(),
+                    TimeElapsedColumn(),
                     *Progress.get_default_columns(),
                 ) as p:
                     task_progress = p.add_task(
@@ -254,6 +275,7 @@ def run(
                 with Progress(
                     SpinnerColumn(),
                     MofNCompleteColumn(),
+                    TimeElapsedColumn(),
                     *Progress.get_default_columns(),
                 ) as p:
                     task_progress = p.add_task("[cyan]Processing...", total=file_total)
@@ -266,7 +288,7 @@ def run(
                         p.update(task_progress, advance=len(ready))
 
                 ray.get(not_ready)
-                Console().log("[bold][red]Finished!")
+                Console().print("\n[bold][red]Finished!")
             else:
                 dir_list = [
                     i
@@ -278,6 +300,7 @@ def run(
                 with Progress(
                     SpinnerColumn(),
                     MofNCompleteColumn(),
+                    TimeElapsedColumn(),
                     *Progress.get_default_columns(),
                 ) as p:
                     task_progress = p.add_task("[cyan]Processing...", total=file_total)
@@ -307,7 +330,7 @@ def run(
                         file_count += ready
                         if p.finished:
                             break
-                Console().log("[bold][red]Finished!")
+                Console().print("\n[bold][red]Finished!")
 
     job_timer = time.time() - job_timer
     sc = job_timer
@@ -322,6 +345,9 @@ def run(
                 "version": "BQAT v" + version,
                 "datetime": str(dt),
                 "input directory": input_folder,
+                "engine": engine,
+                "fusion": fusion,
+                "mode": mode,
                 "processed": file_count,
                 "failed": 0,
                 "log": None,
@@ -354,7 +380,13 @@ def run(
 
     try:
         if output_dir and reporting:
-            write_report(report_dir, output_dir, f"EDA Report (BQAT v{version})")
+            # write_report(report_dir, output_dir, f"EDA Report (BQAT v{version})")
+            dir = generate_report(output_dir, cwd)
+            report_dir = (
+                {"Preview Table": dir.get("table"), "EDA Report": dir.get("report")}
+                if dir
+                else False
+            )
         else:
             report_dir = None
     except Exception as e:
@@ -378,7 +410,7 @@ def run(
     print("\n> Summary:")
     summary = {
         "Total process time": f"{hr}h{mn}m{sc}s",
-        "System throughput": f"{file_count/job_timer:.2f} item/s",
+        "System throughput": f"{file_count / job_timer:.2f} item/s",
         "Assessment Task": {
             "Processed": file_count,
             # "Failed": failed_count,
@@ -392,7 +424,7 @@ def run(
         summary.update({"Outlier Filter": outlier_filter})
 
     Console().print_json(json.dumps(summary))
-    print("\n>> Finished <<\n")
+    Console().print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
 
 
 def filter(output, attributes, query, sort, cwd):
@@ -415,7 +447,7 @@ def filter(output, attributes, query, sort, cwd):
         print("\n> Summary:")
         summary = {"Output Filter": outlier_filter}
         Console().print_json(json.dumps(summary))
-    print("\n>> Finished <<\n")
+    print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
     return dir
 
 
@@ -497,7 +529,10 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
 
     if mode == "face" and engine == "ofiq":
         with Progress(
-            SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+            SpinnerColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            *Progress.get_default_columns(),
         ) as p:
             task_progress = p.add_task("[purple]Processing...", total=file_total)
             tasks.append(
@@ -526,11 +561,14 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
             p.update(task_progress, completed=file_count)
         ray.get(not_ready)
 
-        Console().log("[bold][red]Finished!")
+        Console().print("\n[bold][red]Finished!")
     else:
         if single:
             with Progress(
-                SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+                SpinnerColumn(),
+                MofNCompleteColumn(),
+                TimeElapsedColumn(),
+                *Progress.get_default_columns(),
             ) as p:
                 task_progress = p.add_task("[purple]Processing...", total=file_total)
                 for files in file_globs:
@@ -548,6 +586,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
                 with Progress(
                     SpinnerColumn(),
                     MofNCompleteColumn(),
+                    TimeElapsedColumn(),
                     *Progress.get_default_columns(),
                 ) as p:
                     task_progress = p.add_task(
@@ -569,6 +608,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
                 with Progress(
                     SpinnerColumn(),
                     MofNCompleteColumn(),
+                    TimeElapsedColumn(),
                     *Progress.get_default_columns(),
                 ) as p:
                     task_progress = p.add_task(
@@ -591,7 +631,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
                     with Console().status("[bold green]Processing data...") as _:
                         out = scan(input_dir, mode=mode, type="folder")
                         file_count += len(out.get("results"))
-                    Console().log("[bold][red]Finished!")
+                    Console().print("\n[bold][red]Finished!")
                 except Exception as e:
                     print(str(e))
 
@@ -607,7 +647,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
     summary = {
         "File Processed": file_count,
         "Processing Time": f"{hr}h{mn}m{sc}s",
-        "Throughput": f"{file_count/test_timer:.2f} file/sec",
+        "Throughput": f"{file_count / test_timer:.2f} file/sec",
         "System Info": {
             "python_version": get_cpu_info().get("python_version"),
             "brand_raw": get_cpu_info().get("brand_raw", None),
@@ -627,31 +667,10 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
 
 
 @ray.remote
-def scan_task(path, output_dir, log_dir, mode, convert, target, engine):
-    if engine != "ofiq":
+def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6):
+    if mode == "speech" or (mode == "face" and engine in ("ofiq", "fusion")):
         try:
-            result = scan(path, mode=mode, source=convert, target=target, engine=engine)
-        except Exception as e:
-            print(f">>>> Scan task error: {str(e)}")
-            write_log(log_dir, {"file": path, "task error": str(e)})
-            return
-
-        log = {}
-        if result.get("converted"):
-            log = {"convert": result.get("converted")}
-            log.update({"file": path})
-            write_log(log_dir, log)
-            result.pop("converted")
-        if result.get("log"):
-            log = result.pop("log")
-            log.update({"file": path})
-            write_log(log_dir, log)
-
-        if not log.get("load image"):
-            write_csv(output_dir, result)
-    else:
-        try:
-            result = scan(path, mode=mode, engine=engine)
+            result = scan(path, mode=mode, engine=engine, fusion=fusion)
         except Exception as e:
             print(f">>>> Scan task error: {str(e)}")
             write_log(log_dir, {"folder": path, "task error": str(e)})
@@ -659,13 +678,32 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine):
 
         log = {}
         if result.get("log"):
-            log = result.pop("log")
-            log.update({"folder": path})
-            write_log(log_dir, log)
+            logs = result.pop("log")
+            for log in logs:
+                log.update({"folder": path})
+                write_log(log_dir, log)
 
         result_list = result.get("results")
         for result in result_list:
-            write_csv(output_dir, result)
+            write_csv(output_dir, fix_filepath(result))
+        return result_list
+    else:
+        try:
+            result = scan(path, mode=mode, source=convert, target=target, engine=engine)
+        except Exception as e:
+            print(f">>>> Scan task error: {str(e)}")
+            write_log(log_dir, {"file": path, "task error": str(e)})
+            return
+
+        if result.get("log"):
+            logs = result.pop("log")
+            for log in logs:
+                log.update({"file": path})
+                write_log(log_dir, log)
+
+        write_csv(output_dir, result)
+
+        return [result]
 
 
 @ray.remote
@@ -682,7 +720,9 @@ def report(input, cwd):
     try:
         dir = generate_report(input, cwd)
         report = (
-            {"Table": dir.get("table"), "Report": dir.get("report")} if dir else False
+            {"Preview Table": dir.get("table"), "EDA Report": dir.get("report")}
+            if dir
+            else False
         )
     except Exception as e:
         click.echo(f"failed to generate report: {str(e)}")
@@ -692,7 +732,7 @@ def report(input, cwd):
         print("\n> Summary:")
         summary = {"EDA Report": report}
         Console().print_json(json.dumps(summary))
-    print("\n>> Finished <<\n")
+    print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
     return dir
 
 
@@ -769,7 +809,10 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
         return
 
     with Progress(
-        SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+        SpinnerColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        *Progress.get_default_columns(),
     ) as p:
         task_progress = p.add_task("[cyan]Sending task...", total=file_total)
         for files in file_globs:
@@ -795,7 +838,10 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
     ready, not_ready = ray.wait(tasks)
 
     with Progress(
-        SpinnerColumn(), MofNCompleteColumn(), *Progress.get_default_columns()
+        SpinnerColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        *Progress.get_default_columns(),
     ) as p:
         task_progress = p.add_task("[cyan]Processing...\n", total=file_total)
         while not p.finished:
@@ -807,7 +853,7 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
             p.update(task_progress, advance=len(ready))
 
     ray.get(tasks)
-    Console().log("[bold][red]Finished!")
+    Console().print("\n[bold][red]Finished!")
 
     task_timer = time.time() - task_timer
     sc = task_timer
@@ -826,7 +872,7 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
         },
     }
     Console().print_json(json.dumps(summary))
-    print("\n>> Preprocessing Task Finished <<\n")
+    print("\n>> [bright_yellow]Preprocessing Task Finished[/bright_yellow] <<\n")
 
 
 @ray.remote
