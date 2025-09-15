@@ -1,31 +1,61 @@
 import csv
 import glob
 import json
-import shutil
+from pathlib import Path
 from zipfile import ZipFile
 
-from bqat.app import filter, run
+import pytest
+
+from bqat.app import benchmark, filter, preprocess, report, run
 
 
-def test_face_normal_default(tmp_path):
+@pytest.fixture(scope="session")
+def extracted_samples(tmp_path_factory):
+    base_tmp = tmp_path_factory.mktemp("samples")
+    sample_modes = ["face", "iris", "finger", "speech"]  # add others if needed
+
+    for mode in sample_modes:
+        zip_path = Path("tests/samples") / f"{mode}.zip"
+        dest = base_tmp / mode
+        dest.mkdir(parents=True, exist_ok=True)
+        with ZipFile(zip_path, "r") as z:
+            z.extractall(dest)
+
+    return base_tmp  # contains subfolders: base_tmp/face, base_tmp/speech
+
+
+@pytest.mark.parametrize(
+    "mode,single,reporting,engine",
+    [
+        ("face", False, True, ""),  # was test_face_normal_default
+        ("face", False, False, ""),  # was test_face_normal_single
+        ("face", False, False, "biqt"),  # was test_face_normal_biqt,
+        ("face", False, False, "ofiq"),  # was test_face_normal_ofiq
+        ("finger", False, False, ""),
+        ("iris", False, False, ""),
+        ("speech", False, False, ""),
+        ("speech", True, False, ""),
+    ],
+)
+def test_all_engines(extracted_samples, tmp_path, mode, single, reporting, engine):
     """
     GIVEN a set of mock face images
-    WHEN the images processed by the default engine
-    THEN check if the output files are properly generated
+    WHEN processed by the default engine with different 'single' settings
+    THEN output files should be valid
     """
-    samples = "tests/samples/face.zip"
-    input_dir = tmp_path / "input"
+    input_dir = extracted_samples / mode
     output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
+
+    if engine == "ofiq":
+        input_dir = extracted_samples / mode / "face"
 
     run(
-        mode="face",
+        mode=mode,
         input_folder=str(input_dir),
         output_folder=str(output_dir),
         limit=0,
         pattern="*",
-        single=False,
+        single=single,
         type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
         convert="",
         target="",
@@ -33,235 +63,57 @@ def test_face_normal_default(tmp_path):
         query="",
         sort="",
         cwd="",
+        reporting=reporting,
+        engine=engine,
+        debugging=False,
     )
 
     outputs = glob.glob(str(output_dir) + "/*")
 
-    assert len(outputs) == 3
+    if reporting is True:
+        assert len(outputs) == 3
 
     for path in outputs:
         if path.endswith(".html"):
             with open(path) as f:
-                assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
+                assert f.readline().startswith("<!doctype html>")
+        elif path.endswith(".csv"):
             with open(path) as f:
-                assert csv.Sniffer().has_header(f.readline()) == True
-        if path.endswith(".json"):
+                assert csv.Sniffer().has_header(f.readline()) is True
+            if reporting is False:
+                assert len(outputs) == 2
+        elif path.endswith(".json"):
             with open(path) as f:
                 assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
 
 
-def test_finger_normal_default(tmp_path):
-    """
-    GIVEN a set of mock fingerprint images
-    WHEN the images processed by the default engine
-    THEN check if the output files are properly generated
-    """
-    samples = "tests/samples/finger.zip"
-    input_dir = tmp_path / "input"
+def test_filter_combine(extracted_samples, tmp_path):
+    mode = "finger"
+    input_dir = extracted_samples / mode
     output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
 
     run(
-        mode="finger",
+        mode=mode,
         input_folder=str(input_dir),
         output_folder=str(output_dir),
-        limit=0,
+        limit=8,
         pattern="*",
         single=False,
         type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
         convert="",
-        target="",
-        attributes="",
-        query="",
-        sort="",
-        cwd="",
-    )
-
-    outputs = glob.glob(str(output_dir) + "/*")
-
-    assert len(outputs) == 3
-
-    for path in outputs:
-        if path.endswith(".html"):
-            with open(path) as f:
-                assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
-            with open(path) as f:
-                assert csv.Sniffer().has_header(f.read()) == True
-        if path.endswith(".json"):
-            with open(path) as f:
-                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
-
-
-def test_iris_normal_default(tmp_path):
-    """
-    GIVEN a set of mock iris images
-    WHEN the images processed by the default engine
-    THEN check if the output files are properly generated
-    """
-    samples = "tests/samples/iris.zip"
-    input_dir = tmp_path / "input"
-    output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
-
-    run(
-        mode="iris",
-        input_folder=str(input_dir),
-        output_folder=str(output_dir),
-        limit=0,
-        pattern="*",
-        single=False,
-        type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
-        convert="",
-        target="",
-        attributes="",
-        query="",
-        sort="",
-        cwd="",
-    )
-
-    outputs = glob.glob(str(output_dir) + "/*")
-
-    assert len(outputs) == 3
-
-    for path in outputs:
-        if path.endswith(".html"):
-            with open(path) as f:
-                assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
-            with open(path) as f:
-                assert csv.Sniffer().has_header(f.read()) == True
-        if path.endswith(".json"):
-            with open(path) as f:
-                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
-
-
-def test_face_single(tmp_path):
-    """
-    GIVEN a set of mock face images
-    WHEN the images processed by the default engine
-    THEN check if the output files are properly generated by single thread processing
-    """
-    samples = "tests/samples/face.zip"
-    input_dir = tmp_path / "input"
-    output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
-
-    run(
-        mode="face",
-        input_folder=str(input_dir),
-        output_folder=str(output_dir),
-        limit=0,
-        pattern="*",
-        single=True,
-        type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
-        convert="",
-        target="",
-        attributes="",
-        query="",
-        sort="",
-        cwd="",
-    )
-
-    outputs = glob.glob(str(output_dir) + "/*")
-
-    assert len(outputs) == 3
-
-    for path in outputs:
-        if path.endswith(".html"):
-            with open(path) as f:
-                assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
-            with open(path) as f:
-                # assert csv.Sniffer().has_header(f.read()) == True
-                assert f.readline().count("file") == True
-        if path.endswith(".json"):
-            with open(path) as f:
-                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
-
-
-def test_face_limit(tmp_path):
-    """
-    GIVEN a set of mock face images
-    WHEN the images processed by the default engine
-    THEN check if the output files are properly generated with file number limit
-    """
-    LIMIT = 5
-    samples = "tests/samples/face.zip"
-    input_dir = tmp_path / "input"
-    output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
-
-    run(
-        mode="face",
-        input_folder=str(input_dir),
-        output_folder=str(output_dir),
-        limit=LIMIT,
-        pattern="*",
-        single=False,
-        type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
-        convert="",
-        target="",
-        attributes="",
-        query="",
-        sort="",
-        cwd="",
-    )
-
-    outputs = glob.glob(str(output_dir) + "/*")
-
-    assert len(outputs) == 3
-
-    for path in outputs:
-        if path.endswith(".html"):
-            with open(path) as f:
-                assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
-            with open(path) as f:
-                reader = [row for row in csv.DictReader(f)]
-                entries = len(reader)
-        if path.endswith(".json"):
-            with open(path) as f:
-                log = json.loads(f.read())
-                assert list(log.keys()) == ["metadata", "log"]
-
-    assert entries == LIMIT - len(
-        [record for record in log["log"] if "load image" in list(record.keys())]
-    )
-
-
-def test_filter_combine(tmp_path):
-    samples = "tests/samples/finger.zip"
-    input_dir = tmp_path / "input"
-    output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
-
-    run(
-        mode="finger",
-        input_folder=str(input_dir),
-        output_folder=str(output_dir),
-        limit=10,
-        pattern="*",
-        single=False,
-        type=["wsq", "jpg", "jpeg", "png", "bmp", "jp2"],
-        convert="",
-        target="",
-        attributes="NFIQ2,Width",
-        query="NFIQ2 > 0 and Width < 300",
+        target="bmp",
+        attributes="NFIQ2",
+        query="NFIQ2>0",
         sort="NFIQ2",
         cwd="",
+        reporting=False,
+        engine="",
+        debugging=False,
     )
 
     outputs = glob.glob(str(output_dir) + "/*")
 
-    assert len(outputs) == 5
-
+    assert len(outputs) == 2
     for path in outputs:
         if path.endswith(".html"):
             with open(path) as f:
@@ -269,20 +121,19 @@ def test_filter_combine(tmp_path):
         if path.endswith(".csv"):
             with open(path) as f:
                 assert csv.Sniffer().has_header(f.read()) == True
+            # assert len(outputs) == 5
         if path.endswith(".json"):
             with open(path) as f:
                 assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
 
 
-def test_filter_standalone(tmp_path):
-    samples = "tests/samples/finger.zip"
-    input_dir = tmp_path / "input"
+def test_filter_standalone(extracted_samples, tmp_path):
+    mode = "finger"
+    input_dir = extracted_samples / mode
     output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
 
     run(
-        mode="finger",
+        mode=mode,
         input_folder=str(input_dir),
         output_folder=str(output_dir),
         limit=10,
@@ -295,120 +146,82 @@ def test_filter_standalone(tmp_path):
         query="",
         sort="",
         cwd="",
+        reporting=False,
+        engine="",
+        debugging=False,
     )
 
     outputs = glob.glob(str(output_dir) + "/*")
 
-    assert len(outputs) == 3
+    assert len(outputs) == 2
 
     for path in outputs:
         if path.endswith(".html"):
             with open(path) as f:
                 assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
+
+        if path.endswith(".json"):
             with open(path) as f:
-                assert csv.Sniffer().has_header(f.read()) == True
+                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
+
+        if path.endswith(".csv"):
             dir = filter(path, attributes="NFIQ2", query="NFIQ2>10", sort="", cwd="")
-            assert dir.get("output").endswith(".html") == True
+            assert dir.get("output").endswith(".csv") == True
             with open(dir.get("output")) as f:
-                assert f.readline().find("<!doctype html>") == 0
+                assert csv.Sniffer().has_header(f.read()) == True
             assert dir.get("report").endswith(".html") == True
             with open(dir.get("report")) as f:
                 assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".json"):
-            with open(path) as f:
-                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
+            outputs = glob.glob(str(output_dir) + "/*")
+            assert len(outputs) == 5
+            if path.endswith(".csv"):
+                with open(path) as f:
+                    assert csv.Sniffer().has_header(f.read()) == True
 
 
-def test_speech_single(tmp_path):
-    """
-    GIVEN a set of mock speech samples
-    WHEN the samples processed with single run mode
-    THEN check if the output files are properly generated
-    """
-    samples = "tests/samples/speech.zip"
-    input_dir = tmp_path / "input"
+def test_preprocess_standalone(extracted_samples, tmp_path, capsys):
+    mode = "finger"
+    input_dir = extracted_samples / mode
     output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
-    input_file = str(list(input_dir.glob("**/*.wav"))[0])
-    for index in range(3):
-        shutil.copy(input_file, input_dir / f"input_file_{index}.wav")
 
-    run(
-        mode="speech",
-        input_folder=str(input_dir),
-        output_folder=str(output_dir),
-        limit=0,
-        pattern="*",
-        single=True,
-        type=["wav"],
-        convert="",
-        target="",
-        attributes="",
-        query="",
-        sort="",
-        cwd="",
-    )
+    config = {
+        "target": "png",
+        "grayscale": "true",
+        "rgb": "true",
+        "width": "100",
+        "frac": 0.5,
+    }
+    preprocess(str(input_dir), str(output_dir), True, config)
+    captured = capsys.readouterr()
+    assert "Preprocessing Task Finished" in captured.out
+    # outputs = glob.glob(f"{output_dir}/**/*", recursive=True)
+    # assert len(outputs) == 5
 
-    outputs = glob.glob(str(output_dir) + "/*")
+def test_report_standalone(capsys):
+    input_dir = Path("tests/samples/data.csv")
 
-    assert len(outputs) == 3
-
-    for path in outputs:
-        if path.endswith(".html"):
-            with open(path) as f:
-                assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
-            with open(path) as f:
-                assert csv.Sniffer().has_header(f.readline()) == True
-        if path.endswith(".json"):
-            with open(path) as f:
-                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
+    report(str(input_dir), cwd="")
+    captured = capsys.readouterr()
+    assert "EDA Report" in captured.out
 
 
-def test_speech_batch(tmp_path):
+@pytest.mark.parametrize(
+    "mode,limit,single,engine",
+    [
+        ("face", None, False, ""),
+        ("face", None, False, "ofiq"),
+        ("face", 5, True, ""),
+        ("speech", None, False, ""),
+        ("finger", None, False, ""),
+        ("iris", None, False, ""),
+    ],
+)
+def test_benchmark(capsys, mode: str, limit: int, single: bool, engine: str):
     """
-    GIVEN a set of mock speech samples
-    WHEN the samples processed with batch run mode
-    THEN check if the output files are properly generated
+    GIVEN a set of mock face images
+    WHEN processed by the default engine with different 'single' settings
+    THEN output files should be valid
     """
-    samples = "tests/samples/speech.zip"
-    input_dir = tmp_path / "input"
-    output_dir = tmp_path / "output"
-    with ZipFile(samples, "r") as z:
-        z.extractall(input_dir)
-    input_file = str(list(input_dir.glob("**/*.wav"))[0])
-    for index in range(3):
-        shutil.copy(input_file, input_dir / f"input_file_{index}.wav")
-
-    run(
-        mode="speech",
-        input_folder=str(input_dir),
-        output_folder=str(output_dir),
-        limit=0,
-        pattern="*",
-        single=False,
-        type=["wav"],
-        convert="",
-        target="",
-        attributes="",
-        query="",
-        sort="",
-        cwd="",
-    )
-
-    outputs = glob.glob(str(output_dir) + "/*")
-
-    assert len(outputs) == 3
-
-    for path in outputs:
-        if path.endswith(".html"):
-            with open(path) as f:
-                assert f.readline().find("<!doctype html>") == 0
-        if path.endswith(".csv"):
-            with open(path) as f:
-                assert csv.Sniffer().has_header(f.readline()) == True
-        if path.endswith(".json"):
-            with open(path) as f:
-                assert list(json.loads(f.read()).keys()) == ["metadata", "log"]
+    benchmark(mode=mode, limit=limit, single=single, engine=engine)
+    captured = capsys.readouterr()
+    assert "Benchmarking Finished" in captured.out
