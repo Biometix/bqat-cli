@@ -1,9 +1,15 @@
-<a name="unreleased"></a>
-# unreleased
+<a name="v1.7.0"></a>
+# v1.7.0 (2025-09-15)
 
-## 📚 Documentation
+## 🛠 Fixes
 
-- Init changelog
+- Upgrade Dockerfile to remove conda env.
+- Rework OFIQ engine processing logic.
+
+## 🚀 Features
+
+- Upgrade OFIQ to v1.0.3 [#42](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/42)
+- New installation method [#36](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/36)
 
 
 <a name="v1.6.1"></a>

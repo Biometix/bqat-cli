@@ -191,7 +191,7 @@ async def run(
                     failed += batch
                 tasks = []
             shutil.rmtree(temp_folder)
-        Console().print("\n[bold][red]Finished!")
+        Console().print("\n[bold][red]Finished!", highlight=True)
     else:
         if single:
             with Progress(
@@ -232,7 +232,7 @@ async def run(
                             break
                     if p.finished:
                         break
-            Console().print("\n[bold][red]Finished!")
+            Console().print("\n[bold][red]Finished!", highlight=True)
         else:
             if mode != "speech":
                 with Progress(
@@ -288,7 +288,7 @@ async def run(
                         p.update(task_progress, advance=len(ready))
 
                 ray.get(not_ready)
-                Console().print("\n[bold][red]Finished!")
+                Console().print("\n[bold][red]Finished!", highlight=True)
             else:
                 dir_list = [
                     i
@@ -330,7 +330,7 @@ async def run(
                         file_count += ready
                         if p.finished:
                             break
-                Console().print("\n[bold][red]Finished!")
+                Console().print("\n[bold][red]Finished!", highlight=True)
 
     job_timer = time.time() - job_timer
     sc = job_timer
@@ -561,7 +561,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
             p.update(task_progress, completed=file_count)
         ray.get(not_ready)
 
-        Console().print("\n[bold][red]Finished!")
+        Console().print("\n[bold][red]Finished!", highlight=True)
     else:
         if single:
             with Progress(
@@ -631,7 +631,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
                     with Console().status("[bold green]Processing data...") as _:
                         out = scan(input_dir, mode=mode, type="folder")
                         file_count += len(out.get("results"))
-                    Console().print("\n[bold][red]Finished!")
+                    Console().print("\n[bold][red]Finished!", highlight=True)
                 except Exception as e:
                     print(str(e))
 
@@ -853,7 +853,7 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
             p.update(task_progress, advance=len(ready))
 
     ray.get(tasks)
-    Console().print("\n[bold][red]Finished!")
+    Console().print("\n[bold][red]Finished!", highlight=True)
 
     task_timer = time.time() - task_timer
     sc = task_timer

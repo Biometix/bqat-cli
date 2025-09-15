@@ -135,7 +135,7 @@ RUN apt update && apt -y install python3-pip libblas-dev liblapack-dev libsndfil
 RUN mkdir data temp
 
 RUN groupadd -r assessors && useradd -M -g assessors -s /bin/false assessor
-RUN chown -R assessor /app/data /app/temp
+RUN chown -R assessor /app/data /app/temp /app/tests
 USER assessor
 
 COPY  --chown=assessor:assessors bqat /app/bqat/
