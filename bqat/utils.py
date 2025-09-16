@@ -7,7 +7,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 # from PyInquirer import prompt
 from ydata_profiling import ProfileReport
 
@@ -543,6 +542,7 @@ def split_input_folder(
     batch_size=30,
     exts=("jpg", "jpeg", "png", "bmp", "wsq", "jp2", "wav"),
     pattern="*",
+    limit=0,
 ) -> list:
     if not os.path.isdir(temp_folder):
         raise ValueError("Invalid temp folder path")
@@ -559,6 +559,8 @@ def split_input_folder(
             for ext in extended(exts)
             for file in Path(input_folder).rglob(f"{pattern}.{ext}")
         ]
+    if limit:
+        files = files[:limit]
     n_files = len(files)
     batch_size = batch_size if n_files > batch_size else n_files
     batches = (
