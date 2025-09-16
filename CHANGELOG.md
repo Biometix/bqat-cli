@@ -8,9 +8,9 @@
 
 ## 🚀 Features
 
-- Upgrade OFIQ to v1.0.3 [#42](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/42)
+- Upgrade NFIQ2 to v2.3.0
 - New installation method [#36](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/36)
-
+- Upgrade OFIQ to v1.0.3 [#42](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/42)
 
 <a name="v1.6.1"></a>
 # v1.6.1 (2024-05-01)

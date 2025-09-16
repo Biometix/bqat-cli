@@ -52,7 +52,7 @@ RUN set -e && \
     cd /app; \
     git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
     cd NFIQ2; \
-    git checkout 2a899239d3d72f302cad859145745e8703e32ab0; \
+    git checkout 76b8c4e0b0541f3deab832b1a496e524edc0b5b6; \
     mkdir build; \
     cd build; \
     cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; \
@@ -107,6 +107,8 @@ ENV RAY_DISABLE_DOCKER_CPU_WARNING=1
 ENV YDATA_PROFILING_NO_ANALYTICS=True
 # ENV YOLO_CONFIG_DIR=/tmp/yolo
 ENV DEBIAN_FRONTEND=noninteractive
+ENV OPENCV_LOG_LEVEL=ERROR
+ENV NUMBA_CACHE_DIR=/tmp
 
 COPY bqat/core/bqat_core/misc/BQAT /app/BQAT/
 COPY bqat/core/bqat_core/misc/NISQA /app/NISQA/
