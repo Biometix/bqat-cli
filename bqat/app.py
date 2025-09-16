@@ -78,6 +78,9 @@ async def run(
     if mode == "face":
         metadata.append("\nEngine: ")
         metadata.append(engine.upper(), style="bold yellow")
+    if engine == "fusion":
+        metadata.append("\nFusion Code: ")
+        metadata.append(str(fusion), style="bold yellow")
     metadata.append("\nInput Type: ")
     metadata.append(str(TYPE), style="bold yellow")
     if mode == "finger" and target:
@@ -346,7 +349,6 @@ async def run(
                 "datetime": str(dt),
                 "input directory": input_folder,
                 "engine": engine,
-                "fusion": fusion,
                 "mode": mode,
                 "processed": file_count,
                 "failed": 0,
@@ -354,6 +356,8 @@ async def run(
                 "process time": f"{hr}h{mn}m{sc}s",
             }
         }
+        if engine == "fusion":
+            log_out["metadata"].update({"fusion": fusion})
         with open(log_dir, "r") as f:
             logs = json.load(f)
             log_out["metadata"].update({"log": len(logs)})
@@ -671,21 +675,17 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6
     if mode == "speech" or (mode == "face" and engine in ("ofiq", "fusion")):
         try:
             result = scan(path, mode=mode, engine=engine, fusion=fusion)
+            result_list = result.get("results")
         except Exception as e:
             print(f">>>> Scan task error: {str(e)}")
             write_log(log_dir, {"folder": path, "task error": str(e)})
             return
 
-        log = {}
-        if result.get("log"):
-            logs = result.pop("log")
-            for log in logs:
-                log.update({"folder": path})
-                write_log(log_dir, log)
-
-        result_list = result.get("results")
         for result in result_list:
             write_csv(output_dir, fix_filepath(result))
+            if result.get("log"):
+                log_dict = {"folder": path, "logs": result.pop("log")}
+                write_log(log_dir, log_dict)
         return result_list
     else:
         try:
@@ -702,7 +702,6 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6
                 write_log(log_dir, log)
 
         write_csv(output_dir, result)
-
         return [result]
 
 

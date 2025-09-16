@@ -58,7 +58,7 @@ stages:
 #     - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
 #     - docker push "$CI_REGISTRY_IMAGE:latest"
 #   rules:
-#     - !reference [.tag_rules, rules
+#     - !reference [.tag_rules, rules]
 
 container:
   stage: release
