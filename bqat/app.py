@@ -158,6 +158,7 @@ async def run(
                 exts=TYPE,
                 batch_size=batch,
                 pattern=pattern,
+                limit=limit,
             )
 
         with Progress(
@@ -183,7 +184,7 @@ async def run(
                 not_ready = True
                 while not_ready:
                     ready, not_ready = ray.wait(tasks, timeout=0.1)
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(3)
                 if ray.get(ready)[0]:
                     file_count += batch
                     if file_count > file_total:
@@ -455,7 +456,14 @@ def filter(output, attributes, query, sort, cwd):
     return dir
 
 
-def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
+async def benchmark(
+    mode: str,
+    limit: int,
+    single: bool,
+    engine: str,
+    fusion: int,
+    batch: int,
+) -> None:
     """Run benchmark to profile the capability of host system."""
     ray.init(
         configure_logging=True,
@@ -470,8 +478,11 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
     if mode == "face":
         metadata.append("\nEngine: ")
         metadata.append(engine.upper(), style="bold yellow")
+    if engine == "fusion":
+        metadata.append("\nFusion Code: ")
+        metadata.append(str(fusion), style="bold yellow")
 
-    TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
+    TYPE = ("wsq", "jpg", "jpeg", "png", "bmp", "jp2")
 
     if mode == "fingerprint" or mode == "finger":
         samples = "tests/samples/finger.zip"
@@ -480,7 +491,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
     elif mode == "iris":
         samples = "tests/samples/iris.zip"
     elif mode == "speech":
-        TYPE = ["wav"]
+        TYPE = ("wav",)
         samples = "tests/samples/speech.zip"
     else:
         raise RuntimeError(f"{mode} not support")
@@ -489,7 +500,7 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
         z.extractall(samples.rsplit("/", 1)[0] + "/")
     input_dir = samples.rstrip(".zip") + "/"
 
-    batch = 99
+    repeat = 99
     file_total = 0
     file_count = 0
     tasks = []
@@ -501,24 +512,23 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
         file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
 
     if not single:
-        file_total += file_total * batch
-        if mode == "face" and engine == "ofiq":
-            for files in file_globs:
-                for path in files:
-                    path = Path(path)
-                    for i in range(batch):
-                        shutil.copy(path, path.parent / f"{i}_{path.name}")
-        elif mode != "iris":
-            for _ in range(batch):
+        file_total += file_total * repeat
+        if mode in ("iris", "speech") or (
+            mode == "face" and engine in ("ofiq", "fusion")
+        ):
+            for i in range(repeat):
+                with ZipFile(samples, "r") as z:
+                    z.extractall(f"{input_dir}batch_{i}/")
                 for ext in extend(TYPE):
                     file_globs.append(
                         glob.iglob(input_dir + "**/*." + ext, recursive=True)
                     )
         else:
-            for i in range(batch):
-                with ZipFile(samples, "r") as z:
-                    z.extractall(f"{input_dir}batch_{i}/")
-            file_globs.append(glob.iglob(input_dir + "**/*." + ext, recursive=True))
+            for _ in range(repeat):
+                for ext in extend(TYPE):
+                    file_globs.append(
+                        glob.iglob(input_dir + "**/*." + ext, recursive=True)
+                    )
 
     metadata.append("\nInput: ")
     metadata.append(input_dir, style="bold yellow")
@@ -531,7 +541,18 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
         click.echo(f"Scan number limit: {limit}")
         file_total = limit
 
-    if mode == "face" and engine == "ofiq":
+    if mode == "speech" or (mode == "face" and engine in ("ofiq", "fusion")):
+        with Console().status("Prepare input folders..."):
+            temp_folder = f"temp/{int(time.time())}"
+            Path(temp_folder).mkdir()
+            input_folders = split_input_folder(
+                input_folder=input_dir,
+                temp_folder=temp_folder,
+                exts=TYPE,
+                batch_size=batch,
+                limit=limit,
+            )
+
         with Progress(
             SpinnerColumn(),
             MofNCompleteColumn(),
@@ -539,31 +560,28 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
             *Progress.get_default_columns(),
         ) as p:
             task_progress = p.add_task("[purple]Processing...", total=file_total)
-            tasks.append(
-                benchmark_task.remote(
-                    input_dir,
-                    mode,
-                    engine,
+            for folder in input_folders:
+                tasks.append(
+                    benchmark_task.remote(
+                        folder,
+                        mode,
+                        engine,
+                        fusion,
+                    )
                 )
-            )
-            _, not_ready = ray.wait(tasks, timeout=3)
-            while len(not_ready) != 0:
-                count = 0
-                if not Path("ofiq.log").exists():
-                    continue
-                with open("ofiq.log") as lines:
-                    count = len([1 for _ in lines])
-                    count //= 34
-                advance = count - file_count
-                if advance > 0:
-                    file_count = count
-                    p.update(task_progress, advance=advance)
-                _, not_ready = ray.wait(not_ready, timeout=3)
-                if p.finished:
-                    break
-            file_count = file_total
-            p.update(task_progress, completed=file_count)
-        ray.get(not_ready)
+                not_ready = True
+                while not_ready:
+                    ready, not_ready = ray.wait(tasks, timeout=0.1)
+                    await asyncio.sleep(3)
+
+                file_count += batch
+                if file_count > file_total:
+                    batch = file_total - file_count + batch
+                    file_count = file_total
+                p.update(task_progress, advance=batch)
+
+                tasks = []
+            shutil.rmtree(temp_folder)
 
         Console().print("\n[bold][red]Finished!", highlight=True)
     else:
@@ -586,58 +604,42 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
                         break
 
         else:
-            if mode != "speech":
-                with Progress(
-                    SpinnerColumn(),
-                    MofNCompleteColumn(),
-                    TimeElapsedColumn(),
-                    *Progress.get_default_columns(),
-                ) as p:
-                    task_progress = p.add_task(
-                        "[cyan]Sending task...", total=file_total
-                    )
-                    for files in file_globs:
-                        for path in files:
-                            file_count += 1
-                            p.update(task_progress, advance=1)
-                            tasks.append(benchmark_task.remote(path, mode, engine))
-                            if p.finished:
-                                break
+            with Progress(
+                SpinnerColumn(),
+                MofNCompleteColumn(),
+                TimeElapsedColumn(),
+                *Progress.get_default_columns(),
+            ) as p:
+                task_progress = p.add_task("[cyan]Sending task...", total=file_total)
+                for files in file_globs:
+                    for path in files:
+                        file_count += 1
+                        p.update(task_progress, advance=1)
+                        tasks.append(benchmark_task.remote(path, mode, engine))
                         if p.finished:
                             break
+                    if p.finished:
+                        break
 
-                eta_step = 10  # ETA estimation interval
-                ready, not_ready = ray.wait(tasks)
+            eta_step = 10  # ETA estimation interval
+            ready, not_ready = ray.wait(tasks)
 
-                with Progress(
-                    SpinnerColumn(),
-                    MofNCompleteColumn(),
-                    TimeElapsedColumn(),
-                    *Progress.get_default_columns(),
-                ) as p:
-                    task_progress = p.add_task(
-                        "[cyan]Processing...\n", total=file_total
-                    )
-                    while not p.finished:
-                        if len(not_ready) < eta_step:
-                            p.update(task_progress, completed=file_total)
-                            continue
-                        tasks = not_ready
-                        ready, not_ready = ray.wait(tasks, num_returns=eta_step)
-                        p.update(task_progress, advance=len(ready))
+            with Progress(
+                SpinnerColumn(),
+                MofNCompleteColumn(),
+                TimeElapsedColumn(),
+                *Progress.get_default_columns(),
+            ) as p:
+                task_progress = p.add_task("[cyan]Processing...\n", total=file_total)
+                while not p.finished:
+                    if len(not_ready) < eta_step:
+                        p.update(task_progress, completed=file_total)
+                        continue
+                    tasks = not_ready
+                    ready, not_ready = ray.wait(tasks, num_returns=eta_step)
+                    p.update(task_progress, advance=len(ready))
 
-                ray.get(tasks)
-            else:
-                try:
-                    input_file = glob.glob(input_dir + "*.wav")[0]
-                    for index in range(batch):
-                        shutil.copy(input_file, input_dir + f"input_file_{index}.wav")
-                    with Console().status("[bold green]Processing data...") as _:
-                        out = scan(input_dir, mode=mode, type="folder")
-                        file_count += len(out.get("results"))
-                    Console().print("\n[bold][red]Finished!", highlight=True)
-                except Exception as e:
-                    print(str(e))
+            ray.get(tasks)
 
     shutil.rmtree(input_dir)
 
@@ -651,10 +653,10 @@ def benchmark(mode: str, limit: int, single: bool, engine: str) -> None:
     summary = {
         "File Processed": file_count,
         "Processing Time": f"{hr}h{mn}m{sc}s",
-        "Throughput": f"{file_count / test_timer:.2f} file/sec",
+        "Throughput": f"{file_count / test_timer:.2f} it/s",
         "System Info": {
             "python_version": get_cpu_info().get("python_version"),
-            "brand_raw": get_cpu_info().get("brand_raw", None),
+            "cpu_name": get_cpu_info().get("brand_raw", None),
             "physical_cores:": psutil.cpu_count(logical=False),
             "total_threads:": psutil.cpu_count(logical=True),
             # "cpu_frequency": f"{psutil.cpu_freq().max:.2f}Mhz", # Not available on ARM based Mac
@@ -706,13 +708,21 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6
 
 
 @ray.remote
-def benchmark_task(path: str, mode: str, engine: str) -> None:
+def benchmark_task(path: str, mode: str, engine: str, fusion=6) -> None:
     if mode == "finger":
         scan(
-            path, mode=mode, source="na", target="na"
+            path,
+            mode=mode,
+            source="na",
+            target="na",
         )  # Specify a dummy type so no conversion
     else:
-        print(scan(path, mode=mode, engine=engine))
+        scan(
+            path,
+            mode=mode,
+            engine=engine,
+            fusion=fusion,
+        )
 
 
 def report(input, cwd):

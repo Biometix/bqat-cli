@@ -284,7 +284,16 @@ def main(
 
     if benchmarking:
         mode = "face" if not mode else mode
-        benchmark(mode, limit, arm, engine)
+        asyncio.run(
+            benchmark(
+                mode,
+                limit,
+                arm,
+                engine,
+                fusion,
+                batch,
+            )
+        )
     elif mode:
         asyncio.run(
             run(
