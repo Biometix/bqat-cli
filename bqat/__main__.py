@@ -211,6 +211,27 @@ def main(
     #     click.echo("")
 
     engine = engine.casefold()
+    if engine not in (
+        "bqat",
+        "ofiq",
+        "biqt",
+        "fusion",
+    ):
+        click.echo(f">>> Engine [{engine}] not recognised. Exit.\n")
+        return
+
+    if fusion not in (
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+    ):
+        click.echo(f">>> Engine fusion mode [{fusion}] not recognised. Exit.\n")
+        return
+
     mode = mode.casefold()
     if mode not in (
         "",
