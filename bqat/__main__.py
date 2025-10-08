@@ -210,6 +210,7 @@ def main(
     #             target = v
     #     click.echo("")
 
+    engine = engine.casefold()
     mode = mode.casefold()
     if mode not in (
         "",

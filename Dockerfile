@@ -1,14 +1,12 @@
 FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
-
-# COPY bqat/core/bqat_core/misc/BIQT-Iris /app/biqt-iris/
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN set -e && \
     apt update && \
-    apt upgrade -y; \
-    DEBIAN_FRONTEND=noninteractive apt -y install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev && \
-    apt -y install build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev; \
+    apt upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
     strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
     chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
@@ -46,7 +44,7 @@ RUN set -e && \
     cd /app/biqt-face; \
     mkdir build; \
     cd build; \
-    cmake -DCMAKE_BUILD_TYPE=Release -DOPENBR_DIR=/opt/openbr ..; \
+    cmake -DCMAKE_BUILD_TYPE=Release -DOPENBR_DIR=/opt/openbr -DBIQT_HOME=/usr/local/share/biqt ..; \
     make -j${NUM_CORES}; \
     make install; \
     cd /app; \
@@ -59,8 +57,8 @@ RUN set -e && \
     cmake --build . --config Release; \
     cmake --install .
 
-RUN apt install -y python3-pip liblapack-dev; \
-    pip install conan cmake; \
+RUN apt install -y python3-pip liblapack-dev ca-certificates; \
+    pip install conan==2.0.17 cmake==3.26; \
     cd /app; mkdir ofiq; cd ofiq; \
     git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
     cd OFIQ-Project; \
@@ -118,14 +116,14 @@ COPY Pipfile Pipfile.lock /app/
 COPY tests /app/tests/
 
 RUN apt update && apt -y install python3-pip libblas-dev liblapack-dev libsndfile1; \
-    pip install pipenv && \
+    python3 -m pip install pipenv && \
     if [ "${DEV}" == "true" ]; \
     then pipenv requirements --dev > requirements.txt; \
     else pipenv requirements > requirements.txt; \
     fi; \
-    pip uninstall -y pipenv && \
-    pip install -r requirements.txt; \
-    pip cache purge; python3 -m compileall .; \
+    python3 -m pip uninstall -y pipenv && \
+    python3 -m pip install -r requirements.txt; \
+    python3 -m pip cache purge; python3 -m compileall .; \
     rm -rf /var/lib/apt/lists/*
 
 # RUN mkdir -p /root/.deepface/weights && \
