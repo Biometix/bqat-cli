@@ -6,6 +6,10 @@
 
 - Fix engine flag bug.
 
+## 🚀 Features
+
+- New entry point [#45](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/45)
+
 <a name="v1.7.0"></a>
 # v1.7.0 (2025-09-15)
 

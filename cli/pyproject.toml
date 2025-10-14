@@ -1,0 +1,18 @@
+[project]
+name = "bqat"
+version = "1.7.1"
+description = "Biometric Quality Assessment Tool - CLI (BQAT-CLI)"
+readme = "README.md"
+authors = [{ name = "Liam Wu", email = "liam.wu@biometix.com" }]
+requires-python = ">=3.10,<3.15"
+dependencies = []
+
+[project.scripts]
+bqat = "bqat:cli.main"
+
+[build-system]
+requires = ["uv_build>=0.9.2,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = ["pyinstaller>=6.16.0"]

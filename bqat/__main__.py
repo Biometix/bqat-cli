@@ -169,9 +169,7 @@ def main(
     debugging,
 ):
     console = Console()
-    title = Text("\nWelcome to")
-    title.append(" ")
-    title.append(name, style="bold dark_red")
+    title = Text(name, style="bold dark_red")
     title.append(" ")
     title.append(f"v{version}\n", style="italic underline")
     console.print(title)

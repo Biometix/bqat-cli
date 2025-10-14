@@ -1,8 +1,10 @@
-.venv
+**/.venv
 .vscode
 __pycache__
-.DS_Store
-
-data/*
+**/.DS_Store
+**/dist
+**/build
+**/data
+*.spec
 
 bqat/core/bqat_core/misc/OFIQ/*
