@@ -95,10 +95,11 @@ bin:build:
     - apt install -y python3 python3-pip pipx
     - pipx install uv
   script:
+    - cd cli
     - mkdir bin
     - echo "building for Debian 13 Trixie"
     - /root/.local/bin/uv sync --locked --group dev
-    - /root/.local/bin/uv run pyinstaller -F cli/src/bqat/cli.py -n ${LINUX_BIN}
+    - /root/.local/bin/uv run pyinstaller -F src/bqat/cli.py -n ${LINUX_BIN}
     - mv dist/${LINUX_BIN} bin
   cache:
     key:
