@@ -155,7 +155,7 @@ release:
     assets:
       links:
       - name: "Python Wheel"
-        url: '${PACKAGE_REGISTRY_URL}'
+        url: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi/${VERSION}"
       - name: "Binary Executable"
         url: '${PACKAGE_REGISTRY_URL}/${LINUX_BIN}'
   rules:
