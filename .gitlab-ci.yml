@@ -95,12 +95,12 @@ bin:build:
     - apt install -y python3 python3-pip pipx
     - pipx install uv
   script:
-    - cd cli
     - mkdir bin
+    - cd cli
     - echo "building for Debian 13 Trixie"
     - /root/.local/bin/uv sync --locked --group dev
     - /root/.local/bin/uv run pyinstaller -F src/bqat/cli.py -n ${LINUX_BIN}
-    - mv dist/${LINUX_BIN} bin
+    - mv dist/${LINUX_BIN} ../bin
   cache:
     key:
       files:
@@ -132,11 +132,10 @@ pypi:
   variables:
     TWINE_USERNAME: gitlab-ci-token
     TWINE_PASSWORD: $CI_JOB_TOKEN
-    TWINE_REPOSITORY_URL: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
   script:
     - cd cli
     - uv build --wheel
-    - uvx twine upload dist/*
+    - uvx twine upload ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
   rules:
     - !reference [.commit_rules, rules]
     - !reference [.tag_rules, rules]
