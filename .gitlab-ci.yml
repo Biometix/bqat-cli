@@ -85,7 +85,7 @@ stages:
 #     - !reference [.commit_rules, rules]
 #     - !reference [.tag_rules, rule
 
-bin-build:
+bin:build:
   stage: release
   image: debian:13
   rules:
@@ -108,7 +108,7 @@ bin-build:
     paths:
     - bin/
 
-bin-upload:
+bin:upload:
   stage: release
   needs:
     - job: bin-build
@@ -139,7 +139,7 @@ release:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   needs:
     - job: pypi
-    - job: bin-build
+    - job: bin:build
   script:
     - echo "releasing with new version tag"
   release:
