@@ -155,7 +155,7 @@ release:
     assets:
       links:
       - name: "Python Wheel"
-        url: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi/${VERSION}"
+        url: 'https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/packages'
       - name: "Binary Executable"
         url: '${PACKAGE_REGISTRY_URL}/${LINUX_BIN}'
   rules:
