@@ -132,10 +132,11 @@ pypi:
   variables:
     TWINE_USERNAME: gitlab-ci-token
     TWINE_PASSWORD: $CI_JOB_TOKEN
+    TWINE_REPOSITORY_URL: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
   script:
     - cd cli
     - uv build --wheel
-    - uvx twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+    - uvx twine upload dist/*
   rules:
     - !reference [.commit_rules, rules]
     - !reference [.tag_rules, rules]
@@ -154,7 +155,7 @@ release:
     assets:
       links:
       - name: "Python Wheel"
-        url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi/'
+        url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi'
       - name: "Binary Executable"
         url: '${PACKAGE_REGISTRY_URL}/${LINUX_BIN}'
   rules:
