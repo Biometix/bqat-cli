@@ -1,10 +1,25 @@
-<a name="unreleased"></a>
-# unreleased
+<a name="v1.7.1"></a>
 
-## 📚 Documentation
+# v1.7.1 (2025-10-09)
 
-- Init changelog
+## 🛠 Fixes
 
+- Fix engine flag bug.
+
+<a name="v1.7.0"></a>
+# v1.7.0 (2025-09-15)
+
+## 🛠 Fixes
+
+- Upgrade Dockerfile to remove conda env.
+- Rework OFIQ engine processing logic.
+
+## 🚀 Features
+
+- Add fusion engine benchmarking support.
+- Upgrade NFIQ2 to v2.3.0
+- New installation method [#36](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/36)
+- Upgrade OFIQ to v1.0.3 [#42](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/42)
 
 <a name="v1.6.1"></a>
 # v1.6.1 (2024-05-01)

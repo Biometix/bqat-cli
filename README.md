@@ -185,10 +185,14 @@ For iris samples, if the resolution of the input is higher than 640 by 480, it w
 + For large dataset on Linux, in the runtime, when the memory is exhausted, the kernel will try to reclaim some memory, which could freeze the system if critical system process was killed. This may not affect the final output because the docker runtime are still alive. This will not happen on MacOS or windows. Try to limit the memory or cpu available to Docker runtime or increase physical memory. Modify `--cpus` or `--memory` flags in `run.sh` or in the vanilla docker command.
 
 ## Offline Deployment
-``` sh
-# Build the image with version tag
-docker build -t bqat:v0.1.0 .
 
-# Save the image as tar file
-docker save -o bqat-v0.1.0.tar bqat:v0.1.0
+``` sh
+# Build the image
+docker build --build-arg VER_CORE=0.1.0 --build-arg VER_CLI=0.1.0 -t bqat-cli:latest .
+
+# Save the image as tarball
+docker save bqat-cli:latest | xz > bqat-cli.tar.xz
+
+# Load the image from tarball
+xzcat bqat-cli.tar.xz | docker load
 ```
