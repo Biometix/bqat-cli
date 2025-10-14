@@ -135,7 +135,7 @@ pypi:
   script:
     - cd cli
     - uv build --wheel
-    - uvx twine upload ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+    - uvx twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
   rules:
     - !reference [.commit_rules, rules]
     - !reference [.tag_rules, rules]
