@@ -111,7 +111,7 @@ bin:build:
 bin:upload:
   stage: release
   needs:
-    - job: bin-build
+    - job: bin:build
   image: curlimages/curl:latest
   rules:
     - if: $CI_COMMIT_TAG
@@ -139,7 +139,7 @@ release:
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   needs:
     - job: pypi
-    - job: bin:build
+    - job: bin:upload
   script:
     - echo "releasing with new version tag"
   release:
