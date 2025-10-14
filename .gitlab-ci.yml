@@ -121,7 +121,7 @@ bin:upload:
     - if: $CI_COMMIT_TAG
   script:
     - echo "upload debian exe binary files to package registry"
-    - 'curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file bin/${LINUX_BIN_DEB} "${PACKAGE_REGISTRY_URL}/${LINUX_BIN_DEB}"'
+    - 'curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file bin/${LINUX_BIN} "${PACKAGE_REGISTRY_URL}/${LINUX_BIN}"'
   rules:
     - !reference [.commit_rules, rules]
     - !reference [.tag_rules, rules]
@@ -155,7 +155,7 @@ release:
     assets:
       links:
       - name: "Python Wheel"
-        url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi'
+        url: '${PACKAGE_REGISTRY_URL}'
       - name: "Binary Executable"
         url: '${PACKAGE_REGISTRY_URL}/${LINUX_BIN}'
   rules:
