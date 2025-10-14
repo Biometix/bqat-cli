@@ -20,19 +20,19 @@ BQAT is a biometric quality assessment tool for generating and analysing given b
 
 ## __Modules__
 
-### Fingerprint:
+### Fingerprint
 
 The analysis of fingerprint engine based on NIST/NFIQ2 quality features. The quality score links image quality of optical and ink 500 PPI fingerprints to operational recognition performance.
 
-### Face:
+### Face
 
 The face image assessment provides metrics includes head pose, smile detection, inter-eye-distance, closed eyes, etc.
 
-### Iris:
+### Iris
 
 The iris sample assessment module provides various quality attributes, features, and ISO metrics.
 
-### Speech:
+### Speech
 
 The speech assessment provides various quality metrics, including naturalness, coloration, noisiness, etc.
 
@@ -42,7 +42,7 @@ We welcome all kinds of contributions, including but not limited to bug reports,
 
 We use GitHub issues for tracking requests and bugs. Contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
-### Submit changes:
+### Submit changes
 
 - Open an [Issue](https://github.com/Biometix/bqat-cli/issues) with description of motivates.
 

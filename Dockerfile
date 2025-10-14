@@ -1,27 +1,18 @@
 FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
-
-ARG BIQT_COMMIT=master
-ENV BIQT_COMMIT ${BIQT_COMMIT}
-
-ARG BIQT_FACE_COMMIT=master
-ENV BIQT_FACE_COMMIT ${BIQT_FACE_COMMIT}
-
-# COPY bqat/core/bqat_core/misc/BIQT-Iris /app/biqt-iris/
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN set -e && \
     apt update && \
-    apt upgrade -y; \
-    DEBIAN_FRONTEND=noninteractive apt -y install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev && \
-    apt -y install build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev; \
+    apt upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
     strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
     chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
-    echo "BIQT_COMMIT=${BIQT_COMMIT}" ; \
     mkdir /app 2>/dev/null || true; \
     cd /app; \
-    git clone --verbose https://github.com/mitre/biqt --branch "${BIQT_COMMIT}" biqt-pub; \
+    git clone --verbose https://github.com/mitre/biqt --branch master biqt-pub; \
     export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
     echo "Builds will use ${NUM_CORES} core(s)."; \
     cd /app/biqt-pub; \
@@ -49,30 +40,50 @@ RUN set -e && \
     make -j${NUM_CORES}; \
     make install; \
     cd /app; \
-    git clone https://github.com/mitre/biqt-face.git biqt-face --depth=1 --branch "${BIQT_FACE_COMMIT}"; \
+    git clone https://github.com/mitre/biqt-face.git biqt-face --depth=1 --branch master; \
     cd /app/biqt-face; \
     mkdir build; \
     cd build; \
-    cmake -DCMAKE_BUILD_TYPE=Release -DOPENBR_DIR=/opt/openbr ..; \
+    cmake -DCMAKE_BUILD_TYPE=Release -DOPENBR_DIR=/opt/openbr -DBIQT_HOME=/usr/local/share/biqt ..; \
     make -j${NUM_CORES}; \
     make install; \
     cd /app; \
     git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
     cd NFIQ2; \
-    git checkout 2a899239d3d72f302cad859145745e8703e32ab0; \
+    git checkout 76b8c4e0b0541f3deab832b1a496e524edc0b5b6; \
     mkdir build; \
     cd build; \
     cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; \
     cmake --build . --config Release; \
     cmake --install .
 
-RUN apt install -y python3-pip liblapack-dev; \
-    pip install conan cmake; \
+RUN apt install -y python3-pip liblapack-dev ca-certificates; \
+    pip install conan==2.0.17 cmake==3.26; \
     cd /app; mkdir ofiq; cd ofiq; \
     git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
-    cd OFIQ-Project/scripts; \
+    cd OFIQ-Project; \
+    git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
+    cd scripts; \
     chmod +x *.sh; \
     ./build.sh
+
+
+## BIQT Contact Detector
+# RUN set -e; \
+#     source /etc/profile.d/biqt.sh; \
+#     if [ "${WITH_BIQT_CONTACT_DETECTOR}" == "ON" ]; then \
+#     ( mkdir /app 2>/dev/null || true ); \
+#     cd /app; \
+#     git clone https://github.com/mitre/biqt-contact-detector biqt-contact-detector --branch "master --depth 1; \
+#     cd biqt-contact-detector; \
+#     pip install -r requirements.txt; \
+#     export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
+#     mkdir build; \
+#     cd build; \
+#     cmake -DCMAKE_BUILD_TYPE=Release ..; \
+#     make -j${NUM_CORES}; \
+#     make install; \
+#     fi;
 
 
 FROM ubuntu:22.04 AS release
@@ -91,33 +102,29 @@ ENV PIP_NO_CACHE_DIR=off
 ENV MPLCONFIGDIR=/app/temp
 # ENV RAY_USE_MULTIPROCESSING_CPU_COUNT=1
 ENV RAY_DISABLE_DOCKER_CPU_WARNING=1
+ENV YDATA_PROFILING_NO_ANALYTICS=True
+# ENV YOLO_CONFIG_DIR=/tmp/yolo
+ENV DEBIAN_FRONTEND=noninteractive
+ENV OPENCV_LOG_LEVEL=ERROR
+ENV NUMBA_CACHE_DIR=/tmp
 
-COPY bqat/core/bqat_core/misc/BQAT/haarcascade_smile.xml bqat_core/misc/haarcascade_smile.xml
-COPY bqat/core/bqat_core/misc/NISQA/conda-lock.yml .
-COPY bqat/core/bqat_core/misc/NISQA /app/
+COPY bqat/core/bqat_core/misc/BQAT /app/BQAT/
+COPY bqat/core/bqat_core/misc/NISQA /app/NISQA/
 COPY bqat/core/bqat_core/misc/OFIQ /app/OFIQ/
-COPY Pipfile /app/
+COPY Pipfile Pipfile.lock /app/
 
 COPY tests /app/tests/
 
-ENV PATH=/app/mamba/bin:${PATH}
-RUN apt update && apt -y install curl ca-certificates libblas-dev liblapack-dev; curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" && \
-    ( echo yes ; echo yes ; echo mamba ; echo yes ) | bash Mambaforge-$(uname)-$(uname -m).sh && \
-    mamba install --channel=conda-forge --name=base conda-lock=1.4 && \
-    conda-lock install --name nisqa conda-lock.yml && \
-    mamba clean -afy && \
-    useradd assessor && chown -R assessor /app && \
+RUN apt update && apt -y install python3-pip libblas-dev liblapack-dev libsndfile1; \
     python3 -m pip install pipenv && \
-    pipenv lock && \
-    pipenv requirements > requirements.txt && \
+    if [ "${DEV}" == "true" ]; \
+    then pipenv requirements --dev > requirements.txt; \
+    else pipenv requirements > requirements.txt; \
+    fi; \
     python3 -m pip uninstall -y pipenv && \
-    python3 -m pip install -r requirements.txt
-
-# RUN cd /app; mkdir misc; cd misc; curl -L -O https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2_2.2.0-1_amd64.deb; \
-#     apt install -y ./*amd64.deb
-
-# RUN curl -L -O https://github.com/usnistgov/NFIQ2/releases/download/v2.2.0/nfiq2_2.2.0-1_amd64.deb --create-dirs --output-dir /app/misc/ && \
-#     cd /app/misc; apt install -y ./*amd64.deb
+    python3 -m pip install -r requirements.txt; \
+    python3 -m pip cache purge; python3 -m compileall .; \
+    rm -rf /var/lib/apt/lists/*
 
 # RUN mkdir -p /root/.deepface/weights && \
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/facial_expression_model_weights.h5 -P /root/.deepface/weights/ && \
@@ -125,22 +132,22 @@ RUN apt update && apt -y install curl ca-certificates libblas-dev liblapack-dev;
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/gender_model_weights.h5 -P /root/.deepface/weights/ && \
 #     wget https://github.com/serengil/deepface_models/releases/download/v1.0/race_model_single_batch.h5 -P /root/.deepface/weights/
 
-# RUN apt update && \
-#     DEBIAN_FRONTEND=noninteractive apt -y install openjdk-17-jre-headless g++ libopencv-core4.5d libopencv-highgui4.5d libopencv-imgcodecs4.5d libopencv-imgproc4.5d libjsoncpp25 libqt5xml5 libqt5sql5  libpython3.10 libopencv-objdetect4.5d libqt5widgets5 libopencv-ml4.5d libopencv-videoio4.5d libpython3.10-dev python3-distutils && \
-#     strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so*
+RUN mkdir data temp
 
+RUN groupadd -r assessors && useradd -M -g assessors -s /bin/false assessor
+RUN chown -R assessor /app/data /app/temp /app/tests
 USER assessor
 
-COPY bqat /app/bqat/
+COPY  --chown=assessor:assessors bqat /app/bqat/
 
 COPY --from=build /app/ofiq/OFIQ-Project/install_x86_64_linux/Release/bin ./OFIQ/bin
 COPY --from=build /app/ofiq/OFIQ-Project/install_x86_64_linux/Release/lib ./OFIQ/lib
 COPY --from=build /app/ofiq/OFIQ-Project/data/models ./OFIQ/models
 
 ARG VER_CORE
-ARG VER_API
+ARG VER_CLI
 LABEL BQAT.core.version=$VER_CORE
-LABEL BQAT.api.version=$VER_API
+LABEL BQAT.cli.version=$VER_CLI
 
 ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
 CMD [ "python3 -m bqat --help" ]

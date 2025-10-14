@@ -1,2 +1,0 @@
-[project.scripts]
-bqat = "bqat:main"
