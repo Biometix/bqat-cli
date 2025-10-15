@@ -42,12 +42,12 @@ jobs:
         run: |
           git fetch --tags --depth=1
           CLI_VER=$(git describe --tags --abbrev=0)
-          echo CLI_VER
+          echo $CLI_VER
           echo "cli_ver=${CLI_VER#v}" >> $GITHUB_OUTPUT
-          cd cli
+          cd bqat/core/bqat_core/
           git fetch --tags --depth=1
           CORE_VER=$(git describe --tags --abbrev=0)
-          echo CORE_VER
+          echo $CORE_VER
           echo "core_ver=${CORE_VER#v}" >> $GITHUB_OUTPUT
       -
         name: Build and push release image
