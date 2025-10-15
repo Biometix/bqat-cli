@@ -60,6 +60,7 @@ jobs:
           python-version: '3.14'
       - name: 🛠️ Build Source Distribution and Wheel
         run: |
+          cd cli
           uv build
       - name: 📦 Publish to GitHub Packages
         run: |
