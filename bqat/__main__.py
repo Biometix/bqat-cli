@@ -169,10 +169,11 @@ def main(
     debugging,
 ):
     console = Console()
-    title = Text(name, style="bold dark_red")
-    title.append(" ")
-    title.append(f"v{version}\n", style="italic underline")
-    console.print(title)
+    console.rule(
+        f"[bold dark_red]{name}[/bold dark_red] [italic gray]v{version}[/italic gray]",
+        style="white",
+    )
+    console.print("")
 
     if query and columns:
         if not len([True for col in columns.split(",") if col in query]):
