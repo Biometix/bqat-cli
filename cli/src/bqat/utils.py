@@ -127,7 +127,7 @@ def check_update(image_tag) -> bool:
     try:
         # 1. Get Local Image Digest
         # We use `docker inspect` with a format filter to get JSON containing RepoDigests
-        local_command = ["docker", "inspect", image_tag, "--format", "{{json .}}"]
+        local_command = ["docker", "inspect", image_tag, "--format", "json"]
         local_digest = get_digest_from_cli(local_command)
 
         # 2. Get Remote Image Digest (without pulling)
