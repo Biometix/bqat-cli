@@ -196,9 +196,9 @@ def handle_update(image_tag):
             image_info[0]
             .get("Config", {})
             .get("Labels", {})
-            .get("org.opencontainers.image.version", "not found")
+            .get("bqat.cli.version", "not found")
         )
-        print(f'  "org.opencontainers.image.version": "{version}"')
+        print(f'  "bqat.cli.version": "{version}"')
     except subprocess.CalledProcessError as e:
         print(
             f"Error during Docker pull or inspect: {e.stderr.strip()}",
@@ -306,7 +306,7 @@ def show_version(image_tag):
             image_info[0]
             .get("Config", {})
             .get("Labels", {})
-            .get("org.opencontainers.image.version", "not found")
+            .get("bqat.cli.version", "not found")
         )
         print(f"BQAT-Core: {image_version}")
     except (
