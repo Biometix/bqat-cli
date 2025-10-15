@@ -36,14 +36,30 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - 
+      -
+        name: Get tags from submodules
+        id: tags
+        run: |
+          git fetch --tags
+          CLI_VER=$(git describe --tags --abbrev=0)
+          echo CLI_VER
+          echo "cli_ver=${CLI_VER#v}" >> $GITHUB_OUTPUT
+          cd cli
+          git fetch --tags
+          CORE_VER=$(git describe --tags --abbrev=0)
+          echo CORE_VER
+          echo "core_ver=${CORE_VER#v}" >> $GITHUB_OUTPUT
+      -
         name: Build and push release image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: |
+            ${{ steps.meta.outputs.labels }},
+            bqat.core.version=${{ steps.core.outputs.core_ver }}
+            bqat.cli.version=${{ steps.core.outputs.cli_ver }}
   bin:
     name: Rebuild and Release Wheel
     runs-on: ubuntu-latest
