@@ -3,6 +3,8 @@ import sys
 
 from bqat.utils import handle_cli_update, handle_uninstall, run_container, show_version
 
+IMAGE_NAME = "ghcr.io/biometix/bqat-cli:latest"
+
 
 def main() -> None:
     """Main execution function for the script."""
@@ -16,27 +18,33 @@ def main() -> None:
     parser.add_argument(
         "--update",
         action="store_true",
-        help="Check for and apply updates to the Docker image.",
+        help="Check for and apply updates to the container image.",
     )
     parser.add_argument(
         "--uninstall",
         action="store_true",
-        help="Uninstall the CLI and remove the Docker image.",
+        help="Uninstall the CLI and remove the container image.",
+    )
+    parser.add_argument(
+        "--tag",
+        help="Specify container image tag.",
     )
 
     args, unknown_args = parser.parse_known_args()
 
-    if args.version:
-        show_version()
-    elif args.update:
-        handle_cli_update()
-    elif args.uninstall:
-        handle_uninstall()
+    if not args.tag:
+        image_tag = IMAGE_NAME
     else:
-        # If no special commands are given, run the container with all args.
-        # We pass the original, unprocessed arguments.
-        all_args = sys.argv[1:]
-        run_container(all_args)
+        image_tag = args.tag
+
+    if args.version:
+        show_version(image_tag)
+    elif args.update:
+        handle_cli_update(image_tag)
+    elif args.uninstall:
+        handle_uninstall(image_tag)
+    else:
+        run_container(image_tag, unknown_args)
 
 
 if __name__ == "__main__":

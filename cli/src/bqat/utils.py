@@ -6,7 +6,7 @@ import re
 import subprocess
 import sys
 
-from bqat import IMAGE_NAME, __package__, __version__
+from bqat import __package__, __version__
 
 
 def get_total_memory_mb():
@@ -52,7 +52,7 @@ def get_shm_size(total_memory_mb):
     return "2048MB"
 
 
-def check_update() -> bool:
+def check_update(image_tag) -> bool:
     """
     Checks if a newer version of the 'bqat-cli' Docker image is available.
 
@@ -64,7 +64,7 @@ def check_update() -> bool:
         # It will only fetch new layers if the remote digest has changed.
         print("Checking for a newer version of the image...")
         pull_result = subprocess.run(
-            ["docker", "pull", IMAGE_NAME], capture_output=True, text=True, check=True
+            ["docker", "pull", image_tag], capture_output=True, text=True, check=True
         )
 
         # If the output contains "Status: Image is up to date", no update was needed.
@@ -81,13 +81,13 @@ def check_update() -> bool:
         return True
 
 
-def handle_update():
+def handle_update(image_tag):
     """Handles the Docker update/pull logic."""
     print("Pulling the latest 'bqat-cli' image...")
     try:
         # Pull the image
         subprocess.run(
-            ["docker", "pull", f"{IMAGE_NAME}:latest"],
+            ["docker", "pull", f"{image_tag}:latest"],
             check=True,
             capture_output=True,
             text=True,
@@ -121,18 +121,18 @@ def handle_update():
         )
 
 
-def delete_image():
+def delete_image(image_tag):
     """Removes the 'bqat-cli:latest' Docker image."""
-    print(f"Attempting to remove the '{IMAGE_NAME}' Docker image...")
+    print(f"Attempting to remove the '{image_tag}' Docker image...")
     try:
         subprocess.run(
-            ["docker", "rmi", IMAGE_NAME], check=True, capture_output=True, text=True
+            ["docker", "rmi", image_tag], check=True, capture_output=True, text=True
         )
-        print(f"Successfully removed image '{IMAGE_NAME}'.")
+        print(f"Successfully removed image '{image_tag}'.")
     except subprocess.CalledProcessError as e:
         error_message = e.stderr.decode().strip()
         if "No such image" in error_message:
-            print(f"Image '{IMAGE_NAME}' not found locally.")
+            print(f"Image '{image_tag}' not found locally.")
         else:
             print(f"Error removing Docker image: {error_message}", file=sys.stderr)
             print(
@@ -162,7 +162,7 @@ def _uninstall_package():
         print(f"Failed to uninstall '{__package__}': {e.stderr}", file=sys.stderr)
 
 
-def handle_uninstall():
+def handle_uninstall(image_tag):
     """Handles the uninstall process."""
     try:
         confirm = input(f"Are you sure you want to uninstall {__package__}? (y/N): ")
@@ -175,7 +175,7 @@ def handle_uninstall():
 
         # Remove container image
         confirm = input(
-            f"Are you sure you want to remove the container image {IMAGE_NAME} as well? (y/N): "
+            f"Are you sure you want to remove the container image {image_tag} as well? (y/N): "
         )
 
         if confirm.lower() in ("y", "yes"):
@@ -188,24 +188,24 @@ def handle_uninstall():
         print("\nAborted")
 
 
-def handle_cli_update():
+def handle_cli_update(image_tag):
     """Handles the update check and process."""
     print("Checking for updates...")
-    if check_update():
+    if check_update(image_tag):
         print("A new version is available or the image is not present locally.")
-        handle_update()
+        handle_update(image_tag)
     else:
         print("Your 'bqat-cli' image is up to date.")
 
 
-def show_version():
+def show_version(image_tag):
     """Displays the version of the CLI and the container image."""
     # Version of the CLI app
     print(f"{__package__.upper()}: v{__version__}")
     # Version of the container image
     try:
         result = subprocess.run(
-            ["docker", "inspect", IMAGE_NAME],
+            ["docker", "inspect", image_tag],
             capture_output=True,
             text=True,
             check=True,
@@ -215,9 +215,9 @@ def show_version():
             image_info[0]
             .get("Config", {})
             .get("Labels", {})
-            .get("BQAT.core.version", "not found")
+            .get("org.opencontainers.image.version", "not found")
         )
-        print(f"BQAT-Core: v{image_version}")
+        print(f"BQAT-Core: {image_version}")
     except (
         subprocess.CalledProcessError,
         FileNotFoundError,
@@ -225,12 +225,12 @@ def show_version():
         IndexError,
     ):
         print(
-            f"Container image version: Could not determine (image '{IMAGE_NAME}' not found or Docker not running).",
+            f"Container image version: Could not determine (image '{image_tag}' not found or Docker not running).",
             file=sys.stderr,
         )
 
 
-def run_container(bqat_args: list[str]):
+def run_container(image_tag, bqat_args: list[str]):
     """Builds and executes the docker run command."""
     current_dir = os.getcwd()
     data_dir = os.path.join(current_dir, "data")
@@ -257,11 +257,11 @@ def run_container(bqat_args: list[str]):
         sys.exit(1)
 
     docker_cmd.extend(["-v", volume_path])
-    docker_cmd.append(IMAGE_NAME)
+    docker_cmd.append(image_tag)
 
     # The command to run inside the container
     if not bqat_args:
-        show_version()
+        show_version(image_tag)
         print()
         inner_command = ["python3 -m bqat --help"]
     else:
