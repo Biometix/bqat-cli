@@ -1,5 +1,4 @@
 import argparse
-import sys
 
 from bqat.utils import handle_cli_update, handle_uninstall, run_container, show_version
 
@@ -18,7 +17,7 @@ def main() -> None:
     parser.add_argument(
         "--update",
         action="store_true",
-        help="Check for and apply updates to the container image.",
+        help="Check for and pull updates to the container image.",
     )
     parser.add_argument(
         "--uninstall",

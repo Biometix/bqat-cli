@@ -52,6 +52,71 @@ def get_shm_size(total_memory_mb):
     return "2048MB"
 
 
+def get_digest_from_cli(command):
+    """
+    Executes a Docker CLI command and extracts the image digest.
+
+    :param command: The full command as a list (e.g., ['docker', 'manifest', 'inspect', 'image:tag']).
+    :return: The image digest (SHA-256 hash) as a string, or None if not found/error.
+    """
+    try:
+        # Run the command and capture the output
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+
+        # The output is a JSON string
+        manifest_data = json.loads(result.stdout)
+
+        # The digest is usually stored in the 'Descriptor' key for 'docker manifest inspect'
+        # or the first element of 'RepoDigests' for a local 'docker inspect'.
+
+        # Check for remote manifest digest
+        if isinstance(manifest_data, dict) and "Descriptor" in manifest_data:
+            return manifest_data["Descriptor"]["digest"]
+
+        # Check for local image digest (which is often returned as a list of repo digests)
+        elif (
+            isinstance(manifest_data, list)
+            and manifest_data
+            and "RepoDigests" in manifest_data[0]
+        ):
+            # Expecting a list of digests in the format 'repo@sha256:...'
+            repo_digests = manifest_data[0]["RepoDigests"]
+            if repo_digests:
+                # Return the part after '@' for the first digest
+                return repo_digests[0].split("@")[-1]
+
+        # Handle the raw manifest digest if it's the only thing returned
+        # This handles cases where docker manifest inspect returns a list of manifests for multi-arch images
+        elif (
+            isinstance(manifest_data, list)
+            and manifest_data
+            and "digest" in manifest_data[0]
+        ):
+            # For a multi-arch manifest list, we take the digest of the list itself
+            return manifest_data[0].get(
+                "digest"
+            )  # This is less precise but safer for general use
+
+        # Final fallback if parsing is tricky:
+        if isinstance(manifest_data, dict) and "digest" in manifest_data.get(
+            "config", {}
+        ):
+            return manifest_data["config"]["digest"]
+
+    except subprocess.CalledProcessError as e:
+        # Handles errors like "No such image" or "manifest unknown"
+        if "No such image" in e.stderr or "manifest unknown" in e.stderr:
+            return None
+        print(f"Error executing command: {' '.join(command)}\n{e.stderr.strip()}")
+        return None
+    except json.JSONDecodeError:
+        print("Error: Failed to parse JSON output from Docker CLI.")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
+
+
 def check_update(image_tag) -> bool:
     """
     Checks if a newer version of the 'bqat-cli' Docker image is available.
@@ -60,16 +125,41 @@ def check_update(image_tag) -> bool:
         bool: True if an update is available, False otherwise.
     """
     try:
-        # docker pull is smart enough to not download layers if the image is up to date.
-        # It will only fetch new layers if the remote digest has changed.
-        print("Checking for a newer version of the image...")
-        pull_result = subprocess.run(
-            ["docker", "pull", image_tag], capture_output=True, text=True, check=True
-        )
+        # 1. Get Local Image Digest
+        # We use `docker inspect` with a format filter to get JSON containing RepoDigests
+        local_command = ["docker", "inspect", image_tag, "--format", "{{json .}}"]
+        local_digest = get_digest_from_cli(local_command)
 
-        # If the output contains "Status: Image is up to date", no update was needed.
-        # Otherwise, new layers were downloaded, meaning an update was available.
-        return "Image is up to date" not in pull_result.stdout
+        # 2. Get Remote Image Digest (without pulling)
+        # We use `docker manifest inspect` to query the registry directly
+        remote_command = ["docker", "manifest", "inspect", image_tag]
+        remote_digest = get_digest_from_cli(remote_command)
+
+        print(f"Local Digest:  {local_digest or 'N/A'}")
+        print(f"Remote Digest: {remote_digest or 'N/A'}")
+
+        # 3. Compare Digests
+        if local_digest is None and remote_digest is None:
+            print(
+                "🛑 Neither local image nor remote manifest could be retrieved. Cannot determine status."
+            )
+            return True  # No image, so consider an "update" (initial pull) to be available.
+        elif local_digest is None and remote_digest:
+            print(
+                "✅ Image not found locally, but remote version exists. **New image available** (or needs initial pull)."
+            )
+            return True  # No image, so consider an "update" (initial pull) to be available.
+        elif local_digest and remote_digest is None:
+            print(
+                "⚠️ Local image exists, but remote manifest check failed (e.g., image deleted, auth issue). Status uncertain."
+            )
+            return False
+        elif local_digest == remote_digest:
+            print("👍 The local image is **UP-TO-DATE** with the remote registry.")
+            return False
+        elif local_digest != remote_digest:
+            print("🚨 A **NEW** version of the image is available in the registry!")
+            return True
 
     except (
         subprocess.CalledProcessError,
@@ -106,9 +196,9 @@ def handle_update(image_tag):
             image_info[0]
             .get("Config", {})
             .get("Labels", {})
-            .get("image.version", "not found")
+            .get("org.opencontainers.image.version", "not found")
         )
-        print(f'  "image.version": "{version}"')
+        print(f'  "org.opencontainers.image.version": "{version}"')
     except subprocess.CalledProcessError as e:
         print(
             f"Error during Docker pull or inspect: {e.stderr.strip()}",
@@ -190,12 +280,13 @@ def handle_uninstall(image_tag):
 
 def handle_cli_update(image_tag):
     """Handles the update check and process."""
-    print("Checking for updates...")
+    print(f'Checking for updates to "{image_tag}"...')
     if check_update(image_tag):
-        print("A new version is available or the image is not present locally.")
-        handle_update(image_tag)
+        confirm = input("> Do you want to pull the latest? (y/N): ")
+        if confirm.lower() in ("y", "yes"):
+            handle_update(image_tag)
     else:
-        print("Your 'bqat-cli' image is up to date.")
+        print(f"Your '{image_tag}' image is up to date.")
 
 
 def show_version(image_tag):
