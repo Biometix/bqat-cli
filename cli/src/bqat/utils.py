@@ -177,7 +177,7 @@ def handle_update(image_tag):
     try:
         # Pull the image
         subprocess.run(
-            ["docker", "pull", f"{image_tag}:latest"],
+            ["docker", "pull", f"{image_tag}"],
             check=True,
             capture_output=True,
             text=True,
@@ -186,7 +186,7 @@ def handle_update(image_tag):
         # Inspect to show the version
         print("\nImage version information:")
         result = subprocess.run(
-            ["docker", "inspect", "bqat-cli:latest"],
+            ["docker", "inspect", f"{image_tag}"],
             capture_output=True,
             text=True,
             check=True,
@@ -196,9 +196,9 @@ def handle_update(image_tag):
             image_info[0]
             .get("Config", {})
             .get("Labels", {})
-            .get("org.opencontainers.image.version", "not found")
+            .get("bqat.cli.version", "not found")
         )
-        print(f'  "org.opencontainers.image.version": "{version}"')
+        print(f'  "bqat.cli.version": "{version}"')
     except subprocess.CalledProcessError as e:
         print(
             f"Error during Docker pull or inspect: {e.stderr.strip()}",
@@ -302,13 +302,13 @@ def show_version(image_tag):
             check=True,
         )
         image_info = json.loads(result.stdout)
-        image_version = (
+        core_version = (
             image_info[0]
             .get("Config", {})
             .get("Labels", {})
-            .get("org.opencontainers.image.version", "not found")
+            .get("bqat.core.version", "not found")
         )
-        print(f"BQAT-Core: {image_version}")
+        print(f"Core: {core_version}")
     except (
         subprocess.CalledProcessError,
         FileNotFoundError,

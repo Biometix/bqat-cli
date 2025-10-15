@@ -146,8 +146,8 @@ COPY --from=build /app/ofiq/OFIQ-Project/data/models ./OFIQ/models
 
 ARG VER_CORE
 ARG VER_CLI
-LABEL BQAT.core.version=$VER_CORE
-LABEL BQAT.cli.version=$VER_CLI
+LABEL bqat.core.version=$VER_CORE
+LABEL bqat.cli.version=$VER_CLI
 
 ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
 CMD [ "python3 -m bqat --help" ]
