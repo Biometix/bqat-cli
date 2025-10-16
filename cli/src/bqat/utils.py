@@ -263,15 +263,15 @@ def handle_uninstall(image_tag):
             print("Aborted")
             return
 
-        print("Starting uninstall process...")
-
         # Remove container image
         confirm = input(
-            f"Are you sure you want to remove the container image {image_tag} as well? (y/N): "
+            f"Are you sure you want to remove the container {image_tag} too? (y/N): "
         )
 
+        print("Starting uninstall process...")
+
         if confirm.lower() in ("y", "yes"):
-            delete_image()
+            delete_image(image_tag)
 
         # Register the uninstall function to run when this script exits.
         # This avoids issues with the script trying to delete itself while running.
