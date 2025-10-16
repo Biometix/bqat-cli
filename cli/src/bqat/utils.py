@@ -243,10 +243,15 @@ def _uninstall_package():
     try:
         print("Uninstalling 'bqat-cli' package...")
         # Use subprocess.run and check for errors
-        subprocess.run(
-            [sys.executable, "-m", "pip", "uninstall", "-y", __package__],
-            check=True,
-        )
+        if "python" not in sys.executable:
+            print(
+                "You are probably running via EXE instead of PyPI package, no need to uninstall."
+            )
+        else:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "uninstall", "-y", __package__],
+                check=True,
+            )
     except subprocess.CalledProcessError as e:
         print(f"Failed to uninstall '{__package__}': {str(e)}", file=sys.stderr)
 
