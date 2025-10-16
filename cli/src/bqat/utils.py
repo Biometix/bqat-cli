@@ -246,12 +246,9 @@ def _uninstall_package():
         subprocess.run(
             [sys.executable, "-m", "pip", "uninstall", "-y", __package__],
             check=True,
-            capture_output=True,
-            text=True,
         )
-        print(f"Successfully uninstalled '{__package__}'.")
     except subprocess.CalledProcessError as e:
-        print(f"Failed to uninstall '{__package__}': {e.stderr}", file=sys.stderr)
+        print(f"Failed to uninstall '{__package__}': {str(e)}", file=sys.stderr)
 
 
 def handle_uninstall(image_tag):
