@@ -179,8 +179,6 @@ def handle_update(image_tag):
         subprocess.run(
             ["docker", "pull", f"{image_tag}"],
             check=True,
-            capture_output=True,
-            text=True,
         )
 
         # Inspect to show the version
@@ -192,23 +190,18 @@ def handle_update(image_tag):
             check=True,
         )
         image_info = json.loads(result.stdout)
-        image_version = (
-            image_info[0]
-            .get("Config", {})
-            .get("Labels", {})
-            .get("bqat.cli.version", "not found")
-        )
-        core_version = (
-            image_info[0]
-            .get("Config", {})
-            .get("Labels", {})
-            .get("bqat.core.version", "not found")
-        )
+        labels = image_info[0].get("Config", {}).get("Labels", {})
+        image_version = labels.get("bqat.cli.version", "not found")
+        core_version = labels.get("bqat.core.version", "not found")
+
         print(f'  "bqat.cli.version": "{image_version}"')
         print(f'  "bqat.core.version": "{core_version}"')
     except subprocess.CalledProcessError as e:
+        error_output = (
+            e.stderr.strip() if e.stderr else "See the output above for details."
+        )
         print(
-            f"Error during Docker pull or inspect: {e.stderr.strip()}",
+            f"Error during Docker operation: {error_output}",
             file=sys.stderr,
         )
     except FileNotFoundError:
@@ -216,6 +209,8 @@ def handle_update(image_tag):
             "Error: 'docker' command not found. Ensure Docker is installed and in your PATH.",
             file=sys.stderr,
         )
+    except (json.JSONDecodeError, IndexError) as e:
+        print(f"Error parsing Docker image information: {e}", file=sys.stderr)
 
 
 def delete_image(image_tag):
