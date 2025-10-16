@@ -1,6 +1,6 @@
 [project]
 name = "bqat"
-version = "0.1.0"
+version = "1.7.1"
 description = "Biometric Quality Assessment Tool - CLI (BQAT-CLI)"
 readme = "README.md"
 authors = [{ name = "Liam Wu", email = "liam.wu@biometix.com" }]
