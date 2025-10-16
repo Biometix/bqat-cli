@@ -58,8 +58,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }},
-            bqat.core.version=${{ steps.core.outputs.core_ver }}
-            bqat.cli.version=${{ steps.core.outputs.cli_ver }}
+            bqat.core.version=${{ steps.tags.outputs.core_ver }},
+            bqat.cli.version=${{ steps.tags.outputs.cli_ver }}
   bin:
     name: Rebuild and Release Wheel
     runs-on: ubuntu-latest
