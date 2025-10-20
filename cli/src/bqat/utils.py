@@ -49,7 +49,7 @@ def get_shm_size(total_memory_mb):
         shm_mb = total_memory_mb // 2
         return f"{shm_mb}MB"
     # Default to a safe size if memory could not be determined
-    return "2048MB"
+    return "8192MB"
 
 
 def get_digest_from_cli(command):
