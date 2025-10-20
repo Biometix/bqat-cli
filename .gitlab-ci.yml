@@ -12,7 +12,7 @@ variables:
   PACKAGE_NAME: "bqat"
   LINUX_BIN: "${PACKAGE_NAME}-${VERSION}"
   PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${PACKAGE_NAME}/${VERSION}"
-  UV_VERSION: "0.9.2"
+  UV_VERSION: "0.9.4"
   PYTHON_VERSION: "3.14"
   BASE_LAYER: trixie-slim
   UV_LINK_MODE: copy
@@ -126,7 +126,21 @@ bin:upload:
     - !reference [.commit_rules, rules]
     - !reference [.tag_rules, rules]
 
-pypi:
+pypi:wheel:
+  stage: release
+  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
+  id_tokens:
+    PYPI_ID_TOKEN:
+      aud: pypi
+  script:
+    - cd cli
+    - uv build --wheel
+    - uvx twine upload dist/*
+  rules:
+    - !reference [.commit_rules, rules]
+    - !reference [.tag_rules, rules]
+  
+gitlab:wheel:
   stage: release
   image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
   variables:
@@ -145,8 +159,9 @@ release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   needs:
-    - job: pypi
     - job: bin:upload
+    - job: pypi:wheel
+    - job: gitlab:wheel
   script:
     - echo "releasing with new version tag"
   release:

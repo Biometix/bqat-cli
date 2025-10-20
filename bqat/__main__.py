@@ -45,7 +45,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 #     default="data/output/",
 #     help="Specify log directory.")
 @click.option(
-    "--benchmarking",
+    "--benchmark",
     "-B",
     is_flag=True,
     default=False,
@@ -149,7 +149,7 @@ def main(
     output,
     reporting,
     # log,
-    benchmarking,
+    benchmark,
     mode,
     limit,
     filename,
@@ -303,7 +303,7 @@ def main(
     if not output:
         output = "data/results/"
 
-    if benchmarking:
+    if benchmark:
         mode = "face" if not mode else mode
         asyncio.run(
             benchmark(

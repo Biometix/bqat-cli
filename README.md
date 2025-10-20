@@ -191,8 +191,28 @@ For iris samples, if the resolution of the input is higher than 640 by 480, it w
 docker build --build-arg VER_CORE=0.1.0 --build-arg VER_CLI=0.1.0 -t bqat-cli:latest .
 
 # Save the image as tarball
-docker save bqat-cli:latest | xz > bqat-cli.tar.xz
+docker save bqat-cli:latest | zstd > bqat-cli.tar.zst
 
 # Load the image from tarball
-xzcat bqat-cli.tar.xz | docker load
+zstd -d -c bqat-cli.tar.zst | docker load
+```
+
+## CLI Development
+
+Run package:
+
+```sh
+uv run bqat --help
+```
+
+Build python wheel:
+
+```sh
+uv build
+```
+
+Build binary exe:
+
+```sh
+uv run pyinstaller -F src/bqat/cli.py -n bqat
 ```
