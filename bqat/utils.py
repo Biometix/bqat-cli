@@ -3,16 +3,17 @@ import datetime
 import json
 import os
 import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Generator, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
+
 # from PyInquirer import prompt
 from ydata_profiling import ProfileReport
 
 from bqat import __version__ as version
-
-from .core.bqat_core.utils import extend
 
 
 ## Helper functions
@@ -29,6 +30,7 @@ def to_upper(ext_list):
     for ext in ext_list:
         cap_list.append(ext.upper())
     return ext_list + cap_list
+
 
 # Deprecated
 # def write_report(report_dir, output_dir, title="Biometric Quality Report (BQAT)"):
@@ -56,10 +58,14 @@ def to_upper(ext_list):
 #     ).to_file(report_dir)
 
 
-def write_csv(path, out="", seam=False):
+def write_csv(path, out="", seam=False, init=False):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.parent / "header.temp"
+
+    if init:
+        with open(temp, "w") as f:
+            pass
 
     if seam:
         with open(temp) as f:
@@ -73,7 +79,7 @@ def write_csv(path, out="", seam=False):
             f.write(data)
         temp.unlink()
     else:
-        out = json.loads(pd.json_normalize(out).to_json(orient="index"))["0"]
+        # out = json.loads(pd.json_normalize(out).to_json(orient="index"))["0"]
         if os.path.exists(temp):
             with open(temp) as f:
                 header_len = len(f.readline().split(","))
@@ -253,7 +259,7 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
             data = data.query(query)
         if sort and not data.empty:
             data = data.sort_values(sort.split(","))
-        
+
         data.to_csv(output_dir, index=False)
 
         if not data.empty:
@@ -362,25 +368,18 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
                 )
         else:
             return False
-        
+
         return {
             "table": str(table_dir),
             "report": str(report_dir),
-            "output": str(output_dir)
+            "output": str(output_dir),
         }
 
     else:
         raise RuntimeError("output csv not fount.")
 
 
-def glob_path(path: str, ext: list, recursive: bool = True) -> list:
-    if recursive:
-        return [i for e in extend(ext) for i in list(Path(path).rglob(f"*.{e}"))]
-    else:
-        return [i for e in extend(ext) for i in list(Path(path).glob(f"*.{e}"))]
-
-
-def generate_report(filepath, cwd='') -> dict:
+def generate_report(filepath, cwd="") -> dict:
     p = Path(filepath)
     if not p.is_file() or p.suffix != ".csv":
         print(f">>> Input [{str(p)}] not valid, please specify a CSV file. exit.")
@@ -536,54 +535,110 @@ def extended(ext_list):
 
 
 def split_input_folder(
-    temp_folder,
-    input_folder="",
-    input_files="",
-    batch_size=30,
-    exts=("jpg", "jpeg", "png", "bmp", "wsq", "jp2", "wav"),
-    pattern="*",
-    limit=0,
-) -> list:
-    if not os.path.isdir(temp_folder):
+    temp_folder: Union[str, Path],
+    input_folder: Union[str, Path] = "",
+    input_files: Sequence[Union[str, Path]] = (),
+    batch_size: int = 30,
+    exts: Tuple[str, ...] = ("jpg", "jpeg", "png", "bmp", "wsq", "jp2", "wav"),
+    pattern: str = "*",
+    limit: int = 0,
+    max_workers: int = 16,
+    use_hardlink: bool = True,
+    copy_buffer_size: int = 4 * 1024 * 1024,  # 4MB
+) -> List[str]:
+    """
+    Split input files into numbered batch subfolders under temp_folder.
+    Performance improvements:
+    - Parallel copying with ThreadPoolExecutor.
+    - Use hardlinks when possible to avoid data copy.
+    - Larger buffer for streaming copy.
+    - Precompute Paths and create subfolders before copying.
+    Returns list of created subfolder paths (POSIX strings).
+    """
+    temp_dir = Path(temp_folder)
+    if not temp_dir.is_dir():
         raise ValueError("Invalid temp folder path")
+
+    # Normalize input files
     if input_files:
-        for f in input_files:
-            if not os.path.exists(f):
-                raise ValueError(f"Invalid input files: {f}")
-        files = input_files
+        files = [Path(f) for f in input_files]
+        missing = [str(p) for p in files if not p.exists()]
+        if missing:
+            raise ValueError(f"Invalid input files: {missing}")
     else:
-        if not os.path.isdir(input_folder):
+        input_dir = Path(input_folder)
+        if not input_dir.is_dir():
             raise ValueError("Invalid input folder path")
-        files = [
-            file
-            for ext in extended(exts)
-            for file in Path(input_folder).rglob(f"{pattern}.{ext}")
-        ]
-    if limit:
+
+        # generator of matches across exts
+        def iter_matches():
+            for ext in exts:
+                yield from input_dir.rglob(f"{pattern}.{ext}")
+
+        # collect to list but stop at limit if provided
+        if limit and limit > 0:
+            files = []
+            for p in iter_matches():
+                files.append(p)
+                if len(files) >= limit:
+                    break
+        else:
+            files = list(iter_matches())
+
+        # dedupe & sort for deterministic order
+        files = sorted(dict.fromkeys(files))
+
+    if limit and limit > 0:
         files = files[:limit]
+
     n_files = len(files)
-    batch_size = batch_size if n_files > batch_size else n_files
-    batches = (
-        (n_files // batch_size) + 1
-        if n_files % batch_size != 0
-        else n_files // batch_size
-    )
-    subfolders = []
-    for i in range(batches):
-        subfolder = Path(temp_folder) / f"batch_{i + 1}"
-        subfolder.mkdir(exist_ok=False)
-        subfolders.append(subfolder.as_posix())
-        start = i * batch_size
-        end = start + batch_size
-        [
-            shutil.copyfile(
-                file,
-                subfolder
-                / f"{Path(file).as_posix().encode('utf-8').hex()}{Path(file).suffix}",
-            )
-            for file in files[start:end]
-        ]
-    return subfolders
+    if n_files == 0:
+        return []
+
+    batch_size = max(1, min(batch_size, n_files))
+    n_batches = (n_files + batch_size - 1) // batch_size
+
+    # Pre-create all batch folders
+    subfolders: List[Path] = []
+    for i in range(n_batches):
+        subfolder = temp_dir / f"batch_{i + 1}"
+        try:
+            subfolder.mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            raise FileExistsError(f"Batch folder already exists: {subfolder}")
+        subfolders.append(subfolder)
+
+    # Prepare copy tasks (src, dst)
+    tasks = []
+    for i, src in enumerate(files):
+        batch_idx = i // batch_size
+        dst_name = src.as_posix().encode("utf-8").hex() + src.suffix
+        dst = subfolders[batch_idx] / dst_name
+        tasks.append((src, dst))
+
+    def _copy_task(pair):
+        src, dst = pair
+        # Try hardlink first (cheap) if requested and same filesystem
+        if use_hardlink:
+            try:
+                os.link(src, dst)
+                return dst
+            except Exception:
+                pass
+        # Fall back to streaming copy with buffer
+        with src.open("rb") as fsrc, dst.open("wb") as fdst:
+            shutil.copyfileobj(fsrc, fdst, length=copy_buffer_size)
+        shutil.copystat(src, dst, follow_symlinks=False)
+        return dst
+
+    # Parallel copy using ThreadPoolExecutor
+    max_workers = max(1, min(max_workers, (os.cpu_count() or 1) * 4))
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = [ex.submit(_copy_task, t) for t in tasks]
+        for fut in as_completed(futures):
+            fut.result()  # raise on error if any
+
+    return [p.as_posix() for p in subfolders]
 
 
 def fix_filepath(output_dict):
@@ -592,3 +647,13 @@ def fix_filepath(output_dict):
     if output_dict.get("log"):
         output_dict["log"] = output_dict.pop("log")
     return output_dict
+
+
+def iter_matching_files(
+    base_dir: str | Path,
+    name_pattern: str = "*",
+    extensions: Iterable[str] = None,
+) -> Generator[Path, None, None]:
+    for p in Path(base_dir).rglob(f"{name_pattern}.*"):
+        if not extensions or p.suffix.strip(".") in extensions:
+            yield p

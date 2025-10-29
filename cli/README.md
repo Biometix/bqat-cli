@@ -1,25 +1,23 @@
 # BQAT
 
-> BQAT-CLI
-
 [![PyPI - Version](https://img.shields.io/pypi/v/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Format](https://img.shields.io/pypi/format/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - License](https://img.shields.io/pypi/l/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bqat)](https://pypi.python.org/pypi/bqat)
 
-A terminal interface to [BQAT](https://biometix.github.io/).
+> A command line interface to [BQAT](https://biometix.github.io/).
+
+BQAT (Biometric Quality Assessment Tool) is an open-source tool designed for assessing the quality of biometric data. It provides evaluations for various modalities, including [face](https://biometix.github.io/modality/face.html), [fingerprint](https://biometix.github.io/modality/fingerprint.html), [iris](https://biometix.github.io/modality/iris.html), and [voice](https://biometix.github.io/modality/speech.html).
 
 ## Highlights
 
 - 🚀 A single tool for data analysis workflow with BQAT, and more.
 - 🖥️ Supports macOS, Linux, and Windows.
 
-`bqat` is backed by [Biometix](https://www.biometix.com/).
-
 ## Prerequisites
 
 - [Docker](https://www.docker.com/)
-- x86 CPU
 
 ## Quick Start
 
@@ -38,7 +36,7 @@ A terminal interface to [BQAT](https://biometix.github.io/).
 3. Validate installation via benchmarking
 
     ```sh
-    bqat -B
+    bqat --benchmark
     ```
 
 4. Run BQAT analysis

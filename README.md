@@ -1,5 +1,17 @@
 # Biometric Quality Assessment Tool (BQAT)
 
+<img alt="GitHub tag (latest by date)" src="https://img.shields.io/github/v/tag/biometix/bqat-cli">
+<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/biometix/bqat-cli">
+<img alt="GitHub issues" src="https://img.shields.io/github/issues-raw/biometix/bqat-cli">
+<img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/biometix/bqat-cli">
+<img alt="GitHub" src="https://img.shields.io/github/license/biometix/bqat-cli">
+
+[![PyPI - Version](https://img.shields.io/pypi/v/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - Format](https://img.shields.io/pypi/format/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - License](https://img.shields.io/pypi/l/bqat)](https://pypi.python.org/pypi/bqat)
+
 BQAT is a biometric quality assessment tool for generating and analysing biometric sample quality to international standards and supporting customized metrics. It takes as input directory of biometric images/data in standard formats (e.g. wsq,png,jpg) and output both the raw quality information as well as an analysis report. 
 
 It is available to be run from a docker image. 
@@ -35,35 +47,41 @@ The tool does require additional shared memory and this can be set by using the 
 
 ### Quick start
 
-The `run.sh` is a convenience script for running BQAT.
+Install BQAT-CLI:
 
-> `run.ps1` is powershell version of the same script, simply replace "run.sh" with "run.ps1" in the command below.
+```sh
+pip install bqat
+```
 
-Example:
+Example Usage:
+
 ``` sh
+# Print help information
+bqat --help
+
 # Run samples in /input with fingerprint mode as default
-./run.sh --input data/input/
+bqat --input data/input/
 
 # Run benchmarking task
-./run.sh --input data/input/ --benchmarking
+bqat --input data/input/ --benchmarking
 
 # Run samples in /input with iris mode
-./run.sh --input data/input/ --mode iris
+bqat --input data/input/ --mode iris
 
 # Search the file with name pattern in the input folder
-./run.sh --input data/input/ --mode iris --filename "*FINGER*"
+bqat --input data/input/ --mode iris --filename "*FINGER*"
 
 # Search the file with specific format in the input folder
-./run.sh --input data/input/ --mode iris --type "jp2,pgm,bmp"
+bqat --input data/input/ --mode iris --type "jp2,pgm,bmp"
 
 # Convert the files with specific formats before scanning
-./run.sh --input data/input/ --mode fingerprint --convert "jp2,jpeg"
+bqat --input data/input/ --mode fingerprint --convert "jp2,jpeg"
 
 # Specify the file format to convert to
-./run.sh --input data/input/ --mode fingerprint --target wsq
+bqat --input data/input/ --mode fingerprint --target wsq
 
 # Run samples in /input with face mode, extension function enabled, limit to 100k scan
-./run.sh --input data/input/ --mode face --extension --limit 100000
+bqat --input data/input/ --mode face --extension --limit 100000
 ```
 
 <!-- Alternate interface:
@@ -74,18 +92,17 @@ Example:
 
 ### Optional Flags
 You can append optional flags as follows:
-* -M, --mode         (REQUIRED)  Specify assessment mode (Fingerprint, Face, IRIS).
+
++ -M, --mode         (REQUIRED)  Specify assessment mode (Fingerprint, Face, Iris).
 * -I, --input        (REQUIRED)  Specify input directory
-* -O, --output       (OPTIONAL)  Specify output csv file or directory
-* -B, --benchmark    (OPTIONAL)  Run system benchmarking analysis
-* -L, --limit        (OPTIONAL)  Set a limit for number of files to scan
-* -F, --filename     (OPTIONAL)  Specify filename pattern for searching in the folder
-* -S, --search       (OPTIONAL)  Specify file types to search within the input folder
-* -C, --convert      (OPTIONAL)  Specify file types to convert before processing
-* -T, --target       (OPTIONAL)  Specify target type to convert to
-* -E, --extension    (OPTIONAL)  Enable customized extension function
-* -A, --arm          (OPTIONAL)  Disable multithreading (For ARM64 platform)
-* -X, --interactive  (OPTIONAL)  Enter terminal interactive ui
++ -O, --output       (OPTIONAL)  Specify output csv file or directory
++ -B, --benchmark    (OPTIONAL)  Run system benchmarking analysis
++ -L, --limit        (OPTIONAL)  Set a limit for number of files to scan
++ -F, --filename     (OPTIONAL)  Specify filename pattern for searching in the folder
++ -S, --search       (OPTIONAL)  Specify file types to search within the input folder
++ -C, --convert      (OPTIONAL)  Specify file types to convert before processing
++ -T, --target       (OPTIONAL)  Specify target type to convert to
++ -E, --extension    (OPTIONAL)  Enable customized extension function
 * --help             Show a help message
 
 If the output or log options are not specified then the tool will use a default value.

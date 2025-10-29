@@ -1,8 +1,22 @@
+<a name="v1.8.0"></a>
+
+# v1.8.0 (2025-10-30)
+
+## 🔧 Fixes
+
+- Fix OFIQ recursive input dir issue.
+- Resolve job type flag conflict.
+
+## 🚀 Features
+
+- AArch64 Support [#48](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/48)
+- Add version check up at runtime.
+
 <a name="v1.7.1"></a>
 
 # v1.7.1 (2025-10-09)
 
-## 🛠 Fixes
+## 🔧 Fixes
 
 - Fix engine flag bug.
 
@@ -13,7 +27,7 @@
 <a name="v1.7.0"></a>
 # v1.7.0 (2025-09-15)
 
-## 🛠 Fixes
+## 🔧 Fixes
 
 - Upgrade Dockerfile to remove conda env.
 - Rework OFIQ engine processing logic.
@@ -28,7 +42,7 @@
 <a name="v1.6.1"></a>
 # v1.6.1 (2024-05-01)
 
-## 🛠 Fixes
+## 🔧 Fixes
 
 - Fix conversion type issue.
 - Fix resizing width issue.
@@ -47,7 +61,7 @@
 
 - Update convenience script with dynamic shared memory allocation feature.
 
-## 🛠 Fixes
+## 🔧 Fixes
 
 - Fix iris benchmarking sample file conflict issue. [#28](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/28)
 
@@ -67,7 +81,8 @@
 
 - Add report flag to let the user disable reporting feature. [#15](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/15)
 
-## 🛠 Fixes
+## 🔧 Fixes
+
 - Fix broken benchmarking module.
 
 ## ⚙️ Miscellaneous Tasks
@@ -109,7 +124,7 @@
 <a name="v1.2.4"></a>
 # v1.2.4 (2023-06-09)
 
-## 🛠 Fixes
+## 🔧 Fixes
 
 - Fix speech mode recursive glob issue.
 
@@ -125,7 +140,7 @@
 <a name="v1.2.2"></a>
 # v1.2.2 (2023-04-13)
 
-## 🛠 Fixes
+## 🔧 Fixes
 
 - Bug Fixes
 
@@ -155,7 +170,7 @@
 
 - Add filter flag [#2](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/2)
 
-## 🛠 Fixes
+## 🔧 Fixes
 
 - Fix OOM issue
 - Resolve "Output issue with small dataset" [#6](https://gitlab.com/biometix/products/biometric-quality-assessment-tool/bqat/-/issues/6)
