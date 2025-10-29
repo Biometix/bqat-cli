@@ -9,15 +9,15 @@ verify_ssl = true
 name = "downloadpytorch"
 
 [packages]
+mediapipe = "0.10.18"
 torch = {version = "*", index = "downloadpytorch"}
-mediapipe = "*"
 click = "*"
 rich = "*"
 psutil = "*"
 py-cpuinfo = "*"
-wsq = "*"
 ray = "*"
-ydata-profiling = "4.12.2"
+wordcloud = "1.9.2"
+ydata-profiling = "4.9.0"
 imutils = "*"
 librosa = "*"
 webcolors = "*"
