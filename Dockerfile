@@ -7,8 +7,12 @@ RUN set -e && \
     apt update && \
     apt upgrade -y && \
     DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
-    strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so; \
+    if [ "$TARGETARCH" = "arm64" ]; \
+    then \
+    curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
+    else \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
+    fi; \
     chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
     mkdir /app 2>/dev/null || true; \
     cd /app; \
@@ -65,8 +69,10 @@ RUN apt install -y python3-pip liblapack-dev ca-certificates; \
     git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
     cd scripts; \
     chmod +x *.sh; \
-    ./build.sh
-
+    if [ "$TARGETARCH" = "arm64" ]; \
+    then ./build.sh --os linux-arm64; mv /app/ofiq/OFIQ-Project/install_arm64_linux /app/ofiq/OFIQ-Project/install_linux; \
+    else ./build.sh;  mv /app/ofiq/OFIQ-Project/install_x86_64_linux /app/ofiq/OFIQ-Project/install_linux; \
+    fi
 
 ## BIQT Contact Detector
 # RUN set -e; \
@@ -121,12 +127,12 @@ RUN apt update && apt -y  --no-install-recommends install python3-pip libblas-de
     if [ "${DEV}" == "true" ]; \
     then pipenv requirements --dev > requirements.txt; \
     else pipenv requirements > requirements.txt; \
-    fi \
+    fi; \
     if [ "$TARGETARCH" = "arm64" ]; \
     then \
     git clone https://github.com/KaveIO/PhiK.git && cd PhiK && git checkout tags/v0.12.5 && cd .. && python3 -m pip install PhiK/ && \
     python3 -m pip install BQAT/wsq*.whl; \
-    fi \
+    fi; \
     python3 -m pip uninstall -y pipenv && \
     python3 -m pip install -r requirements.txt && \
     python3 -m pip cache purge; python3 -m compileall . && \
@@ -147,8 +153,8 @@ USER assessor
 
 COPY  --chown=assessor:assessors bqat /app/bqat/
 
-COPY --from=build /app/ofiq/OFIQ-Project/install_x86_64_linux/Release/bin ./OFIQ/bin
-COPY --from=build /app/ofiq/OFIQ-Project/install_x86_64_linux/Release/lib ./OFIQ/lib
+COPY --from=build /app/ofiq/OFIQ-Project/install_linux/Release/bin ./OFIQ/bin
+COPY --from=build /app/ofiq/OFIQ-Project/install_linux/Release/lib ./OFIQ/lib
 COPY --from=build /app/ofiq/OFIQ-Project/data/models ./OFIQ/models
 
 ARG VER_CORE
