@@ -13,12 +13,19 @@ Biometric Quality Assessment Tool (BQAT) - CLI
 [![Tests Status](./reports/junit/tests-badge.svg?dummy=8585744)](https://htmlpreview.github.io/?https://github.com/Biometix/bqat-cli/blob/main/reports/junit/report.html)
 [![Coverage Status](./reports/coverage/coverage-badge.svg?dummy=8585744)](https://htmlpreview.github.io/?https://github.com/Biometix/bqat-cli/blob/main/reports/coverage/index.html)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PyPI - Version](https://img.shields.io/pypi/v/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - Format](https://img.shields.io/pypi/format/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI - License](https://img.shields.io/pypi/l/bqat)](https://pypi.python.org/pypi/bqat)
+
+BQAT is a biometric quality assessment tool for generating and analysing biometric sample quality to international standards and supporting customized metrics. It takes as input directory of biometric images/data in standard formats (e.g. wsq,png,jpg) and output both the raw quality information as well as an analysis report.
 
 > [biometix.github.io](https://biometix.github.io/)
 
 BQAT is a biometric quality assessment tool for generating and analysing given biometric samples’ quality to international standards as well as to customized metrics. The BQAT tool functions by taking an input directory of biometric data and will produce both the raw quality information as well as an analysis report.
 
-## __Modules__
+## Modalities
 
 ### Fingerprint
 
@@ -36,26 +43,116 @@ The iris sample assessment module provides various quality attributes, features,
 
 The speech assessment provides various quality metrics, including naturalness, coloration, noisiness, etc.
 
-## __Contributing__
+```sh
+pip install bqat
+```
 
-We welcome all kinds of contributions, including but not limited to bug reports, proposals and requests of new features, and of course pull requests.
+Example Usage:
 
-We use GitHub issues for tracking requests and bugs. Contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+``` sh
+# Print help information
+bqat --help
 
-### Submit changes
+# Run samples in /input with fingerprint mode as default
+bqat --input data/input/
 
-- Open an [Issue](https://github.com/Biometix/bqat-cli/issues) with description of motivates.
+# Run benchmarking task
+bqat --input data/input/ --benchmarking
 
-- Discuss the proposed changes with other users and the maintainers
+# Run samples in /input with iris mode
+bqat --input data/input/ --mode iris
 
-- Open a [Pull Request](https://github.com/Biometix/bqat-cli/pulls)
+# Search the file with name pattern in the input folder
+bqat --input data/input/ --mode iris --filename "*FINGER*"
 
-- Ensure all CI tests pass
+# Search the file with specific format in the input folder
+bqat --input data/input/ --mode iris --type "jp2,pgm,bmp"
 
-- Provide instructions to demo the changes
+# Convert the files with specific formats before scanning
+bqat --input data/input/ --mode fingerprint --convert "jp2,jpeg"
 
-- It will be accepted after code review!
+# Specify the file format to convert to
+bqat --input data/input/ --mode fingerprint --target wsq
 
-## __License__
+# Run samples in /input with face mode, extension function enabled, limit to 100k scan
+bqat --input data/input/ --mode face --extension --limit 100000
+```
 
-The project is available as open source under the terms of the [Apache-2.0 license](https://www.apache.org/licenses/LICENSE-2.0.html).
+### Optional Flags
+
+You can append optional flags as follows:
+
++ -M, --mode         (REQUIRED)  Specify assessment mode (Fingerprint, Face, Iris).
++ -I, --input        (REQUIRED)  Specify input directory
++ -O, --output       (OPTIONAL)  Specify output csv file or directory
++ -B, --benchmark    (OPTIONAL)  Run system benchmarking analysis
++ -L, --limit        (OPTIONAL)  Set a limit for number of files to scan
++ -F, --filename     (OPTIONAL)  Specify filename pattern for searching in the folder
++ -S, --search       (OPTIONAL)  Specify file types to search within the input folder
++ -C, --convert      (OPTIONAL)  Specify file types to convert before processing
++ -T, --target       (OPTIONAL)  Specify target type to convert to
++ -E, --extension    (OPTIONAL)  Enable customized extension function
++ --help             Show a help message
+
+If the output or log options are not specified then the tool will use a default value.
+
+## Input & Output
+
+### Input Format
+
+For fingerprints the tool works with image formats WSQ and PNG. For both of these formats the image will be run directly through NFIQ2. The image formats JPG and BMP are also supported but will be converted to WSQ first before being run through NFIQ2.
+
+NFIQ2 expects images to have a resolution of at least 500 PPI. The tool will force NFIQ2 to run on images of lower resolution but the result may be inaccurate.
+
+### Output Format
+
+The tool will produce a csv with all the quality scores generated by the engines and some additional columns.
+
+#### _Fingerprint_
+
+| Column Name | Description |
+|---|----|
+| Filename | Filename of the image, including the directory path |
+| FingerCode | NFIQ2 Output |
+| QualityScore | NFIQ2 Output |
+| OptionalError | NFIQ2 Output |
+| Quantized | NFIQ2 Output |
+| Resampled | NFIQ2 Output |
+| UniformImage | NFIQ2 Output |
+| EmptyImageOrContrastTooLow | NFIQ2 Output |
+| FingerprintImageWithMinutiae | NFIQ2 Output |
+| SufficientFingerprintForeground | NFIQ2 Output |
+| EdgeStd | Metric to identify malformed images |
+| Width | Width of the image in pixels |
+| Height | Height of the image in pixels |
+| uuid | The unique id assigned to this image |
+
+#### _Face_
+
+| Column Name | Description |
+|---|----|
+| Filename | Filename of the image, including the directory path |
+| IPD | Inter-pupillary distance |
+| Closed eye left | Bool value |
+| Closed eye right | Bool value |
+| Head pose yaw | Direction and degree |
+| Head pose pitch | Direction and degree |
+| Head pose roll | Direction and degree |
+| Expression smile | Bool value |
+| Face recognition confidence level | Percentage |
+
+#### _Iris_
+
+| Column Name | Description |
+|---|----|
+| quality | An overall quality score that leverages several statistics together |
+| contrast | Raw score quantifying overall image contrast |
+| sharpness | Raw score quantifying the sharpness of the image |
+| iris_diameter | Raw diameter of the iris measured in pixels |
+| percent_visible_iris | Percentage of visible iris area |
+| iris_pupil_gs | Raw measure quantifying how distinguishable the boundary is between the pupil and the iris |
+| iris_sclera_gs | Raw measure quantifying how distinguishable the boundary is between the iris and the sclera |
+
+#### _Report_
+
+A overview statistical report on each of the column.

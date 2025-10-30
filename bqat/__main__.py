@@ -2,18 +2,25 @@ import asyncio
 
 import click
 from rich.console import Console
-from rich.text import Text
+from rich.markdown import Panel
 
+from bqat import __build__ as build
 from bqat import __name__ as name
 from bqat import __version__ as version
-from bqat.app import benchmark, filter, preprocess, report, run
+from bqat.app import benchmark as benchmark_job
+from bqat.app import filter as filter_job
+from bqat.app import preprocess as preprocess_job
+from bqat.app import report as report_job
+from bqat.app import run as assessment_job
 
 # from bqat.utils import menu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 
 
-@click.command()
+@click.command(
+    epilog="See https://biometix.github.io/playbook/cli.html for more details"
+)
 @click.option(
     "--mode",
     "-M",
@@ -33,7 +40,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     help="Specify output directory.",
 )
 @click.option(
-    "--reporting",
+    "--report",
     "-R",
     is_flag=True,
     default=False,
@@ -45,7 +52,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 #     default="data/output/",
 #     help="Specify log directory.")
 @click.option(
-    "--benchmarking",
+    "--benchmark",
     "-B",
     is_flag=True,
     default=False,
@@ -80,13 +87,6 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     "-T",
     default="",
     help="Specify target format to convert to (fingerprint only).",
-)
-@click.option(
-    "--arm",
-    "-A",
-    is_flag=True,
-    default=False,
-    help="Disable multithreading (For ARM64 platform).",
 )
 # @click.option(
 #     "--interactive",
@@ -139,7 +139,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     help='Configure preprocessing task ("[target format],[target width],[color mode (grayscale, rgb)]").',
 )
 @click.option(
-    "--debugging",
+    "--debug",
     is_flag=True,
     default=False,
     help="Enable debugging mode (print out runtime logs).",
@@ -147,16 +147,15 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 def main(
     input,
     output,
-    reporting,
+    report,
     # log,
-    benchmarking,
+    benchmark,
     mode,
     limit,
     filename,
     type,
     convert,
     target,
-    arm,
     # interactive,
     columns,
     query,
@@ -166,13 +165,15 @@ def main(
     fusion,
     engine,
     config,
-    debugging,
+    debug,
 ):
     console = Console()
+    console.print("")
     console.rule(
-        f"[bold dark_red]{name}[/bold dark_red] [italic gray]v{version}[/italic gray]",
+        f"[bold dark_red]{name}[/bold dark_red]",
         style="white",
     )
+    console.print(Panel.fit(f"Version: {version}, Build: {build}"))
     console.print("")
 
     if query and columns:
@@ -223,12 +224,14 @@ def main(
         7,
         6,
         5,
-        4,
+        # 4,
         3,
-        2,
-        1,
+        # 2,
+        # 1,
     ):
-        click.echo(f">>> Engine fusion mode [{fusion}] not recognised. Exit.\n")
+        click.echo(
+            f">>> Engine fusion code [{fusion}] not recognised (e.g. 7, 6, 5, 3). Exit.\n"
+        )
         return
 
     mode = mode.casefold()
@@ -260,11 +263,11 @@ def main(
     target_type = target
 
     if mode == "filter":
-        filter(input, columns, query, sort, cwd)
+        filter_job(input, columns, query, sort, cwd)
         return
 
     if mode == "report":
-        report(input, cwd)
+        report_job(input, cwd)
         return
 
     if mode == "preprocess":
@@ -297,19 +300,18 @@ def main(
         except Exception as e:
             click.echo(f">>> Failed to parse configuration '{config}': {e}. Exit.\n")
             return
-        preprocess(input, output, debugging, configs)
+        preprocess_job(input, output, debug, configs)
         return
 
     if not output:
         output = "data/results/"
 
-    if benchmarking:
+    if benchmark:
         mode = "face" if not mode else mode
         asyncio.run(
-            benchmark(
+            benchmark_job(
                 mode,
                 limit,
-                arm,
                 engine,
                 fusion,
                 batch,
@@ -317,15 +319,14 @@ def main(
         )
     elif mode:
         asyncio.run(
-            run(
+            assessment_job(
                 mode,
                 input,
                 output,
-                reporting,
+                report,
                 # log,
                 limit,
                 filename,
-                arm,
                 input_type,
                 convert_type,
                 target_type,
@@ -336,7 +337,7 @@ def main(
                 batch,
                 fusion,
                 engine,
-                debugging,
+                debug,
             )
         )
 

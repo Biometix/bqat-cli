@@ -17,7 +17,7 @@ def get_total_memory_mb():
             result = subprocess.run(
                 ["vmstat", "-s", "-S", "M"], capture_output=True, text=True, check=True
             )
-            match = re.search(r"(\d+)\s+total memory", result.stdout)
+            match = re.search(r"(\d+)\s*M\s*total memory", result.stdout)
             if match:
                 return int(match.group(1))
         elif system == "Darwin":  # macOS
@@ -49,7 +49,7 @@ def get_shm_size(total_memory_mb):
         shm_mb = total_memory_mb // 2
         return f"{shm_mb}MB"
     # Default to a safe size if memory could not be determined
-    return "2048MB"
+    return "8192MB"
 
 
 def get_digest_from_cli(command):
@@ -135,8 +135,8 @@ def check_update(image_tag) -> bool:
         remote_command = ["docker", "manifest", "inspect", image_tag]
         remote_digest = get_digest_from_cli(remote_command)
 
-        print(f"Local Digest:  {local_digest or 'N/A'}")
-        print(f"Remote Digest: {remote_digest or 'N/A'}")
+        print(f"Local Image Digest:  {local_digest or 'N/A'}")
+        print(f"Remote Image Digest: {remote_digest or 'N/A'}")
 
         # 3. Compare Digests
         if local_digest is None and remote_digest is None:
@@ -369,6 +369,22 @@ def run_container(image_tag, bqat_args: list[str]):
     else:
         inner_command = [f"python3 -m bqat -W {current_dir} {' '.join(bqat_args)}"]
     docker_cmd.extend(inner_command)
+
+    # Check image update
+    local_digest = get_digest_from_cli(
+        ["docker", "inspect", image_tag, "--format", "json"]
+    )
+    remote_digest = get_digest_from_cli(["docker", "manifest", "inspect", image_tag])
+    if (
+        local_digest is not None
+        and remote_digest is not None
+        and local_digest != remote_digest
+    ):
+        confirm = input(
+            "🆕 A **NEW** version is available! Do you want to pull the latest? (y/N): "
+        )
+        if confirm.lower() in ("y", "yes"):
+            handle_update(image_tag)
 
     try:
         subprocess.run(docker_cmd, check=True)
