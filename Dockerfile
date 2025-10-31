@@ -62,7 +62,7 @@ RUN echo $TARGETARCH
 #     cmake --build . --config Release; \
 #     cmake --install .
 
-RUN apt install -y python3-pip liblapack-dev ca-certificates; \
+RUN apt update & apt install -y python3-pip liblapack-dev ca-certificates; \
     pip install conan==2.0.17 cmake==3.26; \
     cd /app; mkdir ofiq; cd ofiq; \
     git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
