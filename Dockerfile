@@ -2,8 +2,9 @@ FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
+ARG TARGETARCH
+ENV TARGETARCH=${TARGETARCH}
 
-RUN echo $TARGETARCH
 # RUN set -e && \
 #     apt update && \
 #     apt upgrade -y && \
