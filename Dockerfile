@@ -63,9 +63,9 @@ ENV TARGETARCH=${TARGETARCH}
 #     cmake --build . --config Release; \
 #     cmake --install .
 
-RUN apt update & apt install -y python3-pip liblapack-dev ca-certificates; \
+RUN apt update && apt install -y --no-install-recommends python3-pip liblapack-dev ca-certificates; \
     pip install conan==2.0.17 cmake==3.26; \
-    cd /app; mkdir ofiq; cd ofiq; \
+    mkdir /app; cd /app; mkdir ofiq; cd ofiq; \
     git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
     cd OFIQ-Project; \
     git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
@@ -124,7 +124,7 @@ COPY Pipfile Pipfile.lock /app/
 
 COPY tests /app/tests/
 
-RUN apt update && apt -y  --no-install-recommends install python3-pip libblas-dev liblapack-dev libsndfile1 build-essential cmake python3-dev ninja-build && \
+RUN apt update && apt -y --no-install-recommends install python3-pip libblas-dev liblapack-dev libsndfile1 build-essential cmake python3-dev ninja-build && \
     python3 -m pip install pipenv && \
     if [ "${DEV}" == "true" ]; \
     then pipenv requirements --dev > requirements.txt; \
