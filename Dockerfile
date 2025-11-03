@@ -2,23 +2,23 @@ FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
-ARG TARGETARCH
 
-RUN echo "Building target ${TARGETARCH} platform."; \
+RUN export ARCH=$(uname -m); \
+    echo "Building target ${ARCH} platform."; \
     set -e && apt update && apt upgrade -y && \
     apt -y --no-install-recommends install git curl build-essential ca-certificates; \
-    if [ "$TARGETARCH" = "arm64" ]; \
+    if [ "$ARCH" = "aarch64" ]; \
     then \
     echo "Building aarch64 target"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
     else \
     echo "Building x86_64 target"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
-    fi; \
-# RUN echo "Building target ${TARGETARCH} platform."; \
+    fi;
+# RUN echo "Building target ${ARCH} platform."; \
 #     set -e && apt update && apt upgrade -y && \
 #     apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
-#     if [ "$TARGETARCH" = "arm64" ]; \
+#     if [ "$ARCH" = "arm64" ]; \
 #     then \
 #     echo "Building aarch64 target"; \
 #     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
@@ -82,7 +82,8 @@ RUN echo "Building target ${TARGETARCH} platform."; \
 #     git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
 #     cd scripts; \
 #     chmod +x *.sh; \
-#     if [ "$TARGETARCH" = "arm64" ]; \
+#     export ARCH=$(uname -m); \
+#     if [ "$ARCH" = "arm64" ]; \
 #     then ./build.sh --os linux-arm64; mv /app/ofiq/OFIQ-Project/install_arm64_linux /app/ofiq/OFIQ-Project/install_linux; \
 #     else ./build.sh;  mv /app/ofiq/OFIQ-Project/install_x86_64_linux /app/ofiq/OFIQ-Project/install_linux; \
 #     fi
@@ -141,7 +142,7 @@ RUN echo "Building target ${TARGETARCH} platform."; \
 #     then pipenv requirements --dev > requirements.txt; \
 #     else pipenv requirements > requirements.txt; \
 #     fi; \
-#     if [ "$TARGETARCH" = "arm64" ]; \
+#     if [ "$ARCH" = "arm64" ]; \
 #     then \
 #     git clone https://github.com/KaveIO/PhiK.git && cd PhiK && git checkout tags/v0.12.5 && cd .. && python3 -m pip install PhiK/ && \
 #     python3 -m pip install BQAT/wsq*.whl; \
