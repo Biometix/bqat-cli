@@ -13,6 +13,7 @@ jobs:
   container:
     name: Build and Release Container Image
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     permissions:
       contents: read
       packages: write

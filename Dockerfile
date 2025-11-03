@@ -2,7 +2,7 @@ FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
-ARG ARG TARGETARCH
+ARG TARGETARCH
 
 RUN echo "Building target ${TARGETARCH} on $(uname -m) platform."; \
     set -e && apt update && apt upgrade -y && \
