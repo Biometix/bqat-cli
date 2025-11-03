@@ -2,18 +2,17 @@ FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
-ARG CPU_ARCH=$(uname -m)
-ENV CPU_ARCH=$CPU_ARCH
+ARG ARG TARGETARCH
 
-RUN echo "Building target ${CPU_ARCH} platform."; \
+RUN echo "Building target ${TARGETARCH} platform."; \
     set -e && apt update && apt upgrade -y && \
     apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
-    if [ "$CPU_ARCH" = "aarch64" ]; \
+    if [ "$TARGETARCH" = "arm64" ]; \
     then \
-    echo "Building aarch64 target"; \
+    echo "Targeting aarch64"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
     else \
-    echo "Building x86_64 target"; \
+    echo "Targeting x86_64"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
     fi; \
     chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
@@ -72,7 +71,7 @@ RUN echo "Building target ${CPU_ARCH} platform."; \
 #     git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
 #     cd scripts; \
 #     chmod +x *.sh; \
-#     if [ "$CPU_ARCH" = "aarch64" ]; \
+#     if [ "$TARGETARCH" = "arm64" ]; \
 #     then ./build.sh --os linux-arm64; mv /app/ofiq/OFIQ-Project/install_arm64_linux /app/ofiq/OFIQ-Project/install_linux; \
 #     else ./build.sh;  mv /app/ofiq/OFIQ-Project/install_x86_64_linux /app/ofiq/OFIQ-Project/install_linux; \
 #     fi
