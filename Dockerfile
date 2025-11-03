@@ -6,26 +6,39 @@ ARG TARGETARCH
 
 RUN echo "Building target ${TARGETARCH} platform."; \
     set -e && apt update && apt upgrade -y && \
-    DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
+    apt -y --no-install-recommends install git curl build-essential ca-certificates; \
     if [ "$TARGETARCH" = "arm64" ]; \
     then \
+    echo "Building aarch64 target"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
     else \
+    echo "Building x86_64 target"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
     fi; \
-    chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
-    mkdir /app 2>/dev/null || true; \
-    cd /app; \
-    git clone --verbose https://github.com/mitre/biqt --branch master biqt-pub; \
-    export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
-    echo "Builds will use ${NUM_CORES} core(s)."; \
-    cd /app/biqt-pub; \
-    mkdir build; \
-    cd build; \
-    cmake -DBUILD_TARGET=UBUNTU -DCMAKE_BUILD_TYPE=Release -DWITH_JAVA=OFF ..; \
-    make -j${NUM_CORES}; \
-    make install; \
-    source /etc/profile.d/biqt.sh;
+# RUN echo "Building target ${TARGETARCH} platform."; \
+#     set -e && apt update && apt upgrade -y && \
+#     apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
+#     if [ "$TARGETARCH" = "arm64" ]; \
+#     then \
+#     echo "Building aarch64 target"; \
+#     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
+#     else \
+#     echo "Building x86_64 target"; \
+#     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
+#     fi; \
+#     chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
+#     mkdir /app 2>/dev/null || true; \
+#     cd /app; \
+#     git clone --verbose https://github.com/mitre/biqt --branch master biqt-pub; \
+#     export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
+#     echo "Builds will use ${NUM_CORES} core(s)."; \
+#     cd /app/biqt-pub; \
+#     mkdir build; \
+#     cd build; \
+#     cmake -DBUILD_TARGET=UBUNTU -DCMAKE_BUILD_TYPE=Release -DWITH_JAVA=OFF ..; \
+#     make -j${NUM_CORES}; \
+#     make install; \
+#     source /etc/profile.d/biqt.sh;
 #     cd /app; git clone https://github.com/mitre/biqt-iris.git; \
 #     cd /app/biqt-iris; \
 #     mkdir build; \
