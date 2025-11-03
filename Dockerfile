@@ -2,43 +2,33 @@ FROM ubuntu:22.04 AS build
 
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
+ARG CPU_ARCH=$(uname -m)
+ENV CPU_ARCH=$CPU_ARCH
 
-RUN export ARCH=$(uname -m); \
-    echo "Building target ${ARCH} platform."; \
+RUN echo "Building target ${CPU_ARCH} platform."; \
     set -e && apt update && apt upgrade -y && \
-    apt -y --no-install-recommends install git curl build-essential ca-certificates; \
-    if [ "$ARCH" = "aarch64" ]; \
+    apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
+    if [ "$CPU_ARCH" = "aarch64" ]; \
     then \
     echo "Building aarch64 target"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
     else \
     echo "Building x86_64 target"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
-    fi;
-# RUN echo "Building target ${ARCH} platform."; \
-#     set -e && apt update && apt upgrade -y && \
-#     apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
-#     if [ "$ARCH" = "arm64" ]; \
-#     then \
-#     echo "Building aarch64 target"; \
-#     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-aarch64.sh; \
-#     else \
-#     echo "Building x86_64 target"; \
-#     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
-#     fi; \
-#     chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
-#     mkdir /app 2>/dev/null || true; \
-#     cd /app; \
-#     git clone --verbose https://github.com/mitre/biqt --branch master biqt-pub; \
-#     export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
-#     echo "Builds will use ${NUM_CORES} core(s)."; \
-#     cd /app/biqt-pub; \
-#     mkdir build; \
-#     cd build; \
-#     cmake -DBUILD_TARGET=UBUNTU -DCMAKE_BUILD_TYPE=Release -DWITH_JAVA=OFF ..; \
-#     make -j${NUM_CORES}; \
-#     make install; \
-#     source /etc/profile.d/biqt.sh;
+    fi; \
+    chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
+    mkdir /app 2>/dev/null || true; \
+    cd /app; \
+    git clone --verbose https://github.com/mitre/biqt --branch master biqt-pub; \
+    export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
+    echo "Builds will use ${NUM_CORES} core(s)."; \
+    cd /app/biqt-pub; \
+    mkdir build; \
+    cd build; \
+    cmake -DBUILD_TARGET=UBUNTU -DCMAKE_BUILD_TYPE=Release -DWITH_JAVA=OFF ..; \
+    make -j${NUM_CORES}; \
+    make install; \
+    source /etc/profile.d/biqt.sh;
 #     cd /app; git clone https://github.com/mitre/biqt-iris.git; \
 #     cd /app/biqt-iris; \
 #     mkdir build; \
@@ -82,8 +72,7 @@ RUN export ARCH=$(uname -m); \
 #     git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
 #     cd scripts; \
 #     chmod +x *.sh; \
-#     export ARCH=$(uname -m); \
-#     if [ "$ARCH" = "arm64" ]; \
+#     if [ "$CPU_ARCH" = "aarch64" ]; \
 #     then ./build.sh --os linux-arm64; mv /app/ofiq/OFIQ-Project/install_arm64_linux /app/ofiq/OFIQ-Project/install_linux; \
 #     else ./build.sh;  mv /app/ofiq/OFIQ-Project/install_x86_64_linux /app/ofiq/OFIQ-Project/install_linux; \
 #     fi
