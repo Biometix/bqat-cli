@@ -130,7 +130,7 @@ RUN apt update && apt -y --no-install-recommends install python3-pip libblas-dev
     then pipenv requirements --dev > requirements.txt; \
     else pipenv requirements > requirements.txt; \
     fi; \
-    if [ "$ARCH" = "arm64" ]; \
+    if [ "$TARGETARCH" = "arm64" ]; \
     then \
     git clone https://github.com/KaveIO/PhiK.git && cd PhiK && git checkout tags/v0.12.5 && cd .. && python3 -m pip install PhiK/ && \
     python3 -m pip install BQAT/wsq*.whl; \
