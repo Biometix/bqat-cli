@@ -13,7 +13,6 @@ jobs:
   container:
     name: Build and Release Container Image
     runs-on: ubuntu-latest
-    timeout-minutes: 150
     permissions:
       contents: read
       packages: write
@@ -58,6 +57,7 @@ jobs:
           echo "core_ver=${CORE_VER#v}" >> $GITHUB_OUTPUT
       -
         name: Build and push release image
+        timeout-minutes: 600
         uses: docker/build-push-action@v6
         with:
           context: .
