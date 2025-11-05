@@ -21,6 +21,7 @@ ydata-profiling = "4.9.0"
 imutils = "*"
 librosa = "*"
 webcolors = "*"
+# wsq = "*"
 
 [dev-packages]
 pytest = "*"
