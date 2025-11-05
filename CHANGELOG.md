@@ -1,3 +1,11 @@
+<a name="v1.8.2"></a>
+
+# v1.8.2 (2025-11-05)
+
+## ⚙️ Miscellaneous
+
+- Refactor Dockerfile
+
 <a name="v1.8.1"></a>
 
 # v1.8.1 (2025-10-30)
@@ -68,7 +76,7 @@
 - Fix speech modality logging issue.
 
 
-## ⚙️ Miscellaneous Tasks
+## ⚙️ Miscellaneous
 
 - Improve logging readability.
 
@@ -85,7 +93,7 @@
 
 - Fix broken benchmarking module.
 
-## ⚙️ Miscellaneous Tasks
+## ⚙️ Miscellaneous
 
 - Revert opencv in nfiq2
 
@@ -105,7 +113,7 @@
 
 - Add reporting mode
 
-## ⚙️ Miscellaneous Tasks
+## ⚙️ Miscellaneous
 
 - Update readme
 
@@ -115,7 +123,7 @@
 <a name="v1.3.0"></a>
 # v1.3.0 (2023-07-28)
 
-## ⚙️ Miscellaneous Tasks
+## ⚙️ Miscellaneous
 
 - Rebuild with bqat-core v1.3.1.
 - Update image dependencies
@@ -144,7 +152,7 @@
 
 - Bug Fixes
 
-## ⚙️ Miscellaneous Tasks
+## ⚙️ Miscellaneous
 
 - Update Dockerfile
 
@@ -180,7 +188,7 @@
 
 - Redo csv output function
 
-## ⚙️ Miscellaneous Tasks
+## ⚙️ Miscellaneous
 
 - Initial commit
 

@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG TARGETARCH
 
 RUN echo "Building target ${TARGETARCH} on $(uname -m) platform."; \
+    mkdir /app 2>/dev/null || true; \
     set -e && apt update && apt upgrade -y && \
     apt -y --no-install-recommends install git less vim g++ curl libopencv-dev libjsoncpp-dev qtbase5-dev build-essential libssl-dev libdb-dev libdb++-dev libopenjp2-7 libopenjp2-tools libpcsclite-dev libssl-dev libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev libopenmpi-dev libdb++-dev libsqlite3-dev libhwloc-dev libavcodec-dev libavformat-dev libswscale-dev ca-certificates; \
     if [ "$TARGETARCH" = "arm64" ]; \
@@ -15,62 +16,45 @@ RUN echo "Building target ${TARGETARCH} on $(uname -m) platform."; \
     echo "Targeting x86_64"; \
     curl -L -O https://github.com/Kitware/CMake/releases/download/v3.29.1/cmake-3.29.1-linux-x86_64.sh; \
     fi; \
-    chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;\
-    mkdir /app 2>/dev/null || true; \
-    cd /app; \
-    git clone --verbose https://github.com/mitre/biqt --branch master biqt-pub; \
+    chmod +x cmake*.sh; mkdir /opt/cmake; ./cmake*.sh --prefix=/opt/cmake --skip-license; ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake;
+
+RUN cd /app; git clone --verbose https://github.com/mitre/biqt --branch master biqt-pub; \
     export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
     echo "Builds will use ${NUM_CORES} core(s)."; \
-    cd /app/biqt-pub; \
-    mkdir build; \
-    cd build; \
+    cd /app/biqt-pub; mkdir build; cd build; \
     cmake -DBUILD_TARGET=UBUNTU -DCMAKE_BUILD_TYPE=Release -DWITH_JAVA=OFF ..; \
-    make -j${NUM_CORES}; \
-    make install; \
-    source /etc/profile.d/biqt.sh; \
-    cd /app; git clone https://github.com/mitre/biqt-iris.git; \
-    cd /app/biqt-iris; \
-    mkdir build; \
-    cd build; \
+    make -j${NUM_CORES}; make install; \
+    source /etc/profile.d/biqt.sh;
+
+RUN cd /app; git clone https://github.com/mitre/biqt-iris.git; \
+    cd /app/biqt-iris; mkdir build; cd build; \
     cmake -DBIQT_HOME=/usr/local/share/biqt -DCMAKE_BUILD_TYPE=Release ..; \
-    make -j${NUM_CORES}; \
-    make install; \
-    cd /app; \
-    git clone https://github.com/biometrics/openbr.git openbr || exit 5; \
+    make -j${NUM_CORES}; make install;
+
+RUN cd /app; git clone https://github.com/biometrics/openbr.git openbr || exit 5; \
     cd /app/openbr; \
     git checkout 1e1c8f; \
-    mkdir build; \
-    cd build; \
+    mkdir build; cd build; \
     cmake -DCMAKE_BUILD_TYPE=Release -DBR_WITH_OPENCV_NONFREE=OFF -DCMAKE_INSTALL_PREFIX=/opt/openbr ..; \
     export NUM_CORES=$(cat /proc/cpuinfo | grep -Pc "processor\s*:\s*[0-9]+\s*$"); \
-    make -j${NUM_CORES}; \
-    make install; \
-    cd /app; \
-    git clone https://github.com/mitre/biqt-face.git biqt-face --depth=1 --branch master; \
-    cd /app/biqt-face; \
-    mkdir build; \
-    cd build; \
+    make -j${NUM_CORES}; make install;
+
+RUN cd /app; git clone https://github.com/mitre/biqt-face.git biqt-face --depth=1 --branch master; \
+    cd /app/biqt-face; mkdir build; cd build; \
     cmake -DCMAKE_BUILD_TYPE=Release -DOPENBR_DIR=/opt/openbr -DBIQT_HOME=/usr/local/share/biqt ..; \
-    make -j${NUM_CORES}; \
-    make install; \
-    cd /app; \
-    git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
+    make -j${NUM_CORES}; make install;
+
+RUN cd /app; git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
     cd NFIQ2; \
     git checkout 76b8c4e0b0541f3deab832b1a496e524edc0b5b6; \
-    mkdir build; \
-    cd build; \
-    cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; \
-    cmake --build . --config Release; \
-    cmake --install .
+    mkdir build; cd build; \
+    cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; cmake --build . --config Release; cmake --install .
 
-RUN apt install -y --no-install-recommends python3-pip liblapack-dev ca-certificates; \
+RUN set -e && apt install -y --no-install-recommends python3-pip liblapack-dev; \
     pip install conan==2.0.17 cmake==3.26; \
-    cd /app; mkdir ofiq; cd ofiq; \
-    git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
-    cd OFIQ-Project; \
-    git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
-    cd scripts; \
-    chmod +x *.sh; \
+    cd /app; mkdir ofiq; cd ofiq; git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
+    cd OFIQ-Project; git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
+    cd scripts; chmod +x *.sh; \
     if [ "$TARGETARCH" = "arm64" ]; \
     then ./build.sh --os linux-arm64; mv /app/ofiq/OFIQ-Project/install_arm64_linux /app/ofiq/OFIQ-Project/install_linux; \
     else ./build.sh;  mv /app/ofiq/OFIQ-Project/install_x86_64_linux /app/ofiq/OFIQ-Project/install_linux; \
@@ -124,7 +108,7 @@ COPY Pipfile Pipfile.lock /app/
 
 COPY tests /app/tests/
 
-RUN apt update && apt -y --no-install-recommends install python3-pip libblas-dev liblapack-dev libsndfile1 build-essential cmake python3-dev ninja-build && \
+RUN set -e && apt update && apt -y --no-install-recommends install python3-pip libblas-dev liblapack-dev libsndfile1 build-essential cmake python3-dev ninja-build && \
     python3 -m pip install pipenv && \
     if [ "${DEV}" == "true" ]; \
     then pipenv requirements --dev > requirements.txt; \
@@ -134,10 +118,12 @@ RUN apt update && apt -y --no-install-recommends install python3-pip libblas-dev
     then \
     git clone https://github.com/KaveIO/PhiK.git && cd PhiK && git checkout tags/v0.12.5 && cd .. && python3 -m pip install PhiK/ && \
     python3 -m pip install BQAT/wsq*.whl; \
+    else \
+    python3 -m pip install wsq; \
     fi; \
     python3 -m pip uninstall -y pipenv && \
     python3 -m pip install -r requirements.txt && \
-    python3 -m pip cache purge; python3 -m compileall . && \
+    python3 -m compileall . && \
     apt remove -y --purge python3-pip build-essential cmake python3-dev ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
@@ -149,8 +135,7 @@ RUN apt update && apt -y --no-install-recommends install python3-pip libblas-dev
 
 RUN mkdir data temp
 
-RUN groupadd -r assessors && useradd -M -g assessors -s /bin/false assessor
-RUN chown -R assessor /app/data /app/temp /app/tests
+RUN groupadd -r assessors && useradd -M -g assessors -s /bin/false assessor && chown -R assessor /app/data /app/temp /app/tests
 USER assessor
 
 COPY  --chown=assessor:assessors bqat /app/bqat/
