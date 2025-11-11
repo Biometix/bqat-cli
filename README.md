@@ -5,6 +5,7 @@
 <img alt="GitHub issues" src="https://img.shields.io/github/issues-raw/biometix/bqat-cli">
 <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/biometix/bqat-cli">
 <img alt="GitHub" src="https://img.shields.io/github/license/biometix/bqat-cli">
+
 [![PyPI - Version](https://img.shields.io/pypi/v/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Format](https://img.shields.io/pypi/format/bqat)](https://pypi.python.org/pypi/bqat)
