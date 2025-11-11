@@ -102,10 +102,7 @@ def get_digest_from_cli(command):
             and "RepoDigests" in manifest_data[0]
         ):
             # Expecting a list of digests in the format 'repo@sha256:...'
-            repo_digests = manifest_data[0]["Id"]
-            if repo_digests:
-                # Return the part after '@' for the first digest
-                return repo_digests[0].split("@")[-1]
+            return manifest_data[0]["Id"]
 
         # Handle the raw manifest digest if it's the only thing returned
         # This handles cases where docker manifest inspect returns a list of manifests for multi-arch images
