@@ -1,8 +1,9 @@
 FROM ubuntu:22.04 AS build
 
+ARG TARGETARCH
+
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
-ARG TARGETARCH
 
 RUN echo "Building target ${TARGETARCH} on $(uname -m) platform."; \
     mkdir /app 2>/dev/null || true; \
@@ -79,6 +80,8 @@ RUN set -e && apt install -y --no-install-recommends python3-pip liblapack-dev; 
 
 
 FROM ubuntu:22.04 AS release
+
+ARG TARGETARCH
 
 WORKDIR /app
 

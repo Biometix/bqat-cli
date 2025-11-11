@@ -27,10 +27,10 @@ BQAT (Biometric Quality Assessment Tool) is an open-source tool designed for ass
     pip install bqat
     ```
 
-2. Display help info
+2. Display version info
 
     ```sh
-    bqat --help
+    bqat --version
     ```
 
 3. Validate installation via benchmarking
@@ -55,6 +55,8 @@ Please refer to the documentation of [BQAT](https://biometix.github.io/).
 
 | Flag | Description |
 | --- | --- |
-| --version, -v | Show version info. |
+| --- | --- |
+| --help | Print help info. |
+| --version, -v | Display version info. |
 | --update | Update BQAT backend container. |
 | --uninstall | Uninstall BQAT-CLI. |
