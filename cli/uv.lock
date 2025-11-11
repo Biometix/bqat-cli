@@ -13,7 +13,7 @@ wheels = [
 
 [[package]]
 name = "bqat"
-version = "1.8.0"
+version = "1.8.3"
 source = { editable = "." }
 
 [package.dev-dependencies]

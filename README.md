@@ -233,3 +233,19 @@ Build binary exe:
 ```sh
 uv run pyinstaller -F src/bqat/cli.py -n bqat
 ```
+
+## Multi-platform Build
+
++ Run build step on each machine; collect the printed digests (or run docker inspect to read them).
+
+``` sh
+./build-and-publish-multiarch.sh build <OWNER> <REPO> <TAG> <VER_CORE> <VER_CLI>
+```
+
++ Run merge step once (on any machine) with the two full digest strings.
+
+``` sh
+./build-and-publish-multiarch.sh merge <OWNER> <REPO> <TAG> <AMD64_DIGEST> <ARM64_DIGEST>
+```
+
+> Make sure docker login ghcr.io is completed beforehand.

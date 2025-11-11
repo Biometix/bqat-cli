@@ -9,6 +9,28 @@ import sys
 from bqat import __package__, __version__
 
 
+def get_host_arch():
+    """Get the host system architecture."""
+    arch = platform.machine()
+    if arch in ("x86_64", "amd64", "i386"):
+        return "amd64"
+    else:
+        return arch
+
+
+def get_host_info():
+    """Get the host system info."""
+    info = {
+        "Host Platform": platform.platform(),
+        "Memory": f"{get_total_memory_mb() / 1024:.2f} GB",
+        # "Architecture": platform.machine(),
+        # "OS": platform.system(),
+        # "OS Version": platform.release(),
+        "Python Version": platform.python_version(),
+    }
+    return info
+
+
 def get_total_memory_mb():
     """Get the total system memory in megabytes (MB)."""
     system = platform.system()
@@ -80,7 +102,7 @@ def get_digest_from_cli(command):
             and "RepoDigests" in manifest_data[0]
         ):
             # Expecting a list of digests in the format 'repo@sha256:...'
-            repo_digests = manifest_data[0]["RepoDigests"]
+            repo_digests = manifest_data[0]["Id"]
             if repo_digests:
                 # Return the part after '@' for the first digest
                 return repo_digests[0].split("@")[-1]
@@ -96,6 +118,13 @@ def get_digest_from_cli(command):
             return manifest_data[0].get(
                 "digest"
             )  # This is less precise but safer for general use
+
+        # Check for remote manifest digest for multi-platform build
+        if isinstance(manifest_data, dict) and "manifests" in manifest_data:
+            arch = get_host_arch()
+            for manifest in manifest_data["manifests"]:
+                if manifest["platform"]["architecture"] == arch:
+                    return manifest["digest"]
 
         # Final fallback if parsing is tricky:
         if isinstance(manifest_data, dict) and "digest" in manifest_data.get(
@@ -318,8 +347,15 @@ def show_version(image_tag):
             .get("Labels", {})
             .get("bqat.cli.version", "not found")
         )
+        image_arch = image_info[0].get("Architecture", "not found")
+
         print(f"BQAT Core: {core_version}")
         print(f"Container image: {image_version}")
+        print(f"Image architecture: {image_arch}")
+
+        sys_info = get_host_info()
+        for key, value in sys_info.items():
+            print(f"{key}: {value}")
     except (
         subprocess.CalledProcessError,
         FileNotFoundError,
@@ -372,9 +408,11 @@ def run_container(image_tag, bqat_args: list[str]):
 
     # Check image update
     local_digest = get_digest_from_cli(
-        ["docker", "inspect", image_tag, "--format", "json"]
+        ["docker", "inspect", image_tag, "--format", "json"],
     )
-    remote_digest = get_digest_from_cli(["docker", "manifest", "inspect", image_tag])
+    remote_digest = get_digest_from_cli(
+        ["docker", "manifest", "inspect", image_tag],
+    )
     if (
         local_digest is not None
         and remote_digest is not None
