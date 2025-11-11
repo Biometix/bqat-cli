@@ -23,8 +23,6 @@ BQAT is a biometric quality assessment tool for generating and analysing biometr
 
 > [biometix.github.io](https://biometix.github.io/)
 
-BQAT is a biometric quality assessment tool for generating and analysing given biometric samples’ quality to international standards as well as to customized metrics. The BQAT tool functions by taking an input directory of biometric data and will produce both the raw quality information as well as an analysis report.
-
 ## Modalities
 
 ### Fingerprint
