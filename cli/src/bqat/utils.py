@@ -143,58 +143,62 @@ def get_digest_from_cli(command):
         return None
 
 
-def check_update(image_tag) -> bool:
-    """
-    Checks if a newer version of the 'bqat-cli' Docker image is available.
+# def check_update(image_tag) -> bool:
+#     """
+#     Checks if a newer version of the 'bqat-cli' Docker image is available.
 
-    Returns:
-        bool: True if an update is available, False otherwise.
-    """
-    try:
-        # 1. Get Local Image Digest
-        # We use `docker inspect` with a format filter to get JSON containing RepoDigests
-        local_command = ["docker", "inspect", image_tag, "--format", "json"]
-        local_digest = get_digest_from_cli(local_command)
+#     Returns:
+#         bool: True if an update is available, False otherwise.
+#     """
+#     try:
+#         # 1. Get Local Image Digest
+#         # We use `docker inspect` with a format filter to get JSON containing RepoDigests
+#         local_command = ["docker", "inspect", image_tag, "--format", "json"]
+#         local_digest = get_digest_from_cli(local_command)
+#         digest_tag = f"{image_tag.split(':', 1)[0]}@{local_digest}"
+#         local_digest = get_digest_from_cli(
+#             ["docker", "manifest", "inspect", digest_tag],
+#         )
 
-        # 2. Get Remote Image Digest (without pulling)
-        # We use `docker manifest inspect` to query the registry directly
-        remote_command = ["docker", "manifest", "inspect", image_tag]
-        remote_digest = get_digest_from_cli(remote_command)
+#         # 2. Get Remote Image Digest (without pulling)
+#         # We use `docker manifest inspect` to query the registry directly
+#         remote_command = ["docker", "manifest", "inspect", image_tag]
+#         remote_digest = get_digest_from_cli(remote_command)
 
-        print(f"Local Image Digest:  {local_digest or 'N/A'}")
-        print(f"Remote Image Digest: {remote_digest or 'N/A'}")
+#         print(f"Local Image Digest:  {local_digest or 'N/A'}")
+#         print(f"Remote Image Digest: {remote_digest or 'N/A'}")
 
-        # 3. Compare Digests
-        if local_digest is None and remote_digest is None:
-            print(
-                "🛑 Neither local image nor remote manifest could be retrieved. Cannot determine status."
-            )
-            return True  # No image, so consider an "update" (initial pull) to be available.
-        elif local_digest is None and remote_digest:
-            print(
-                "✅ Image not found locally, but remote version exists. **New image available** (or needs initial pull)."
-            )
-            return True  # No image, so consider an "update" (initial pull) to be available.
-        elif local_digest and remote_digest is None:
-            print(
-                "⚠️ Local image exists, but remote manifest check failed (e.g., image deleted, auth issue). Status uncertain."
-            )
-            return False
-        elif local_digest == remote_digest:
-            print("👍 The local image is **UP-TO-DATE** with the remote registry.")
-            return False
-        elif local_digest != remote_digest:
-            print("🚨 A **NEW** version of the image is available in the registry!")
-            return True
+#         # 3. Compare Digests
+#         if local_digest is None and remote_digest is None:
+#             print(
+#                 "🛑 Neither local image nor remote manifest could be retrieved. Cannot determine status."
+#             )
+#             return True  # No image, so consider an "update" (initial pull) to be available.
+#         elif local_digest is None and remote_digest:
+#             print(
+#                 "✅ Image not found locally, but remote version exists. **New image available** (or needs initial pull)."
+#             )
+#             return True  # No image, so consider an "update" (initial pull) to be available.
+#         elif local_digest and remote_digest is None:
+#             print(
+#                 "⚠️ Local image exists, but remote manifest check failed (e.g., image deleted, auth issue). Status uncertain."
+#             )
+#             return False
+#         elif local_digest == remote_digest:
+#             print("👍 The local image is **UP-TO-DATE** with the remote registry.")
+#             return False
+#         elif local_digest != remote_digest:
+#             print("🚨 A **NEW** version of the image is available in the registry!")
+#             return True
 
-    except (
-        subprocess.CalledProcessError,
-        FileNotFoundError,
-    ):
-        # If docker pull fails, it could be because the image doesn't exist locally yet,
-        # or Docker isn't running. In either case, we can consider an "update" (initial pull)
-        # to be available.
-        return True
+#     except (
+#         subprocess.CalledProcessError,
+#         FileNotFoundError,
+#     ):
+#         # If docker pull fails, it could be because the image doesn't exist locally yet,
+#         # or Docker isn't running. In either case, we can consider an "update" (initial pull)
+#         # to be available.
+#         return True
 
 
 def handle_update(image_tag):
@@ -206,22 +210,20 @@ def handle_update(image_tag):
             ["docker", "pull", f"{image_tag}"],
             check=True,
         )
+        # # Inspect to show the version
+        # result = subprocess.run(
+        #     ["docker", "inspect", f"{image_tag}"],
+        #     capture_output=True,
+        #     text=True,
+        #     check=True,
+        # )
+        # image_info = json.loads(result.stdout)
+        # labels = image_info[0].get("Config", {}).get("Labels", {})
+        # image_version = labels.get("bqat.cli.version", "not found")
+        # core_version = labels.get("bqat.core.version", "not found")
 
-        # Inspect to show the version
-        print("\nImage version information:")
-        result = subprocess.run(
-            ["docker", "inspect", f"{image_tag}"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        image_info = json.loads(result.stdout)
-        labels = image_info[0].get("Config", {}).get("Labels", {})
-        image_version = labels.get("bqat.cli.version", "not found")
-        core_version = labels.get("bqat.core.version", "not found")
-
-        print(f'  "bqat.cli.version": "{image_version}"')
-        print(f'  "bqat.core.version": "{core_version}"')
+        # print(f"BQAT-CLI container version: {image_version}")
+        # print(f"BQAT-Core version: {core_version}\n")
     except subprocess.CalledProcessError as e:
         error_output = (
             e.stderr.strip() if e.stderr else "See the output above for details."
@@ -308,15 +310,15 @@ def handle_uninstall(image_tag):
         print("\nAborted")
 
 
-def handle_cli_update(image_tag):
-    """Handles the update check and process."""
-    print(f'Checking for updates to "{image_tag}"...')
-    if check_update(image_tag):
-        confirm = input("> Do you want to pull the latest? (y/N): ")
-        if confirm.lower() in ("y", "yes"):
-            handle_update(image_tag)
-    else:
-        print(f"Your '{image_tag}' image is up to date.")
+# def handle_cli_update(image_tag):
+#     """Handles the update check and process."""
+#     print(f'Checking for updates to "{image_tag}"...')
+#     if check_update(image_tag):
+#         confirm = input("> Do you want to pull the latest? (y/N): ")
+#         if confirm.lower() in ("y", "yes"):
+#             handle_update(image_tag)
+#     else:
+#         print(f"Your '{image_tag}' image is up to date.")
 
 
 def show_version(image_tag):
@@ -403,23 +405,30 @@ def run_container(image_tag, bqat_args: list[str]):
         inner_command = [f"python3 -m bqat -W {current_dir} {' '.join(bqat_args)}"]
     docker_cmd.extend(inner_command)
 
-    # Check image update
-    local_digest = get_digest_from_cli(
-        ["docker", "inspect", image_tag, "--format", "json"],
-    )
-    remote_digest = get_digest_from_cli(
-        ["docker", "manifest", "inspect", image_tag],
-    )
-    if (
-        local_digest is not None
-        and remote_digest is not None
-        and local_digest != remote_digest
-    ):
-        confirm = input(
-            "🆕 A **NEW** version is available! Do you want to pull the latest? (y/N): "
-        )
-        if confirm.lower() in ("y", "yes"):
-            handle_update(image_tag)
+    # # Check image update
+    # local_digest = get_digest_from_cli(
+    #     ["docker", "inspect", image_tag, "--format", "json"],
+    # )
+    # digest_tag = f"{image_tag.split(':', 1)[0]}@{local_digest}"
+    # local_digest = get_digest_from_cli(
+    #     ["docker", "manifest", "inspect", digest_tag],
+    # )
+
+    # remote_digest = get_digest_from_cli(
+    #     ["docker", "manifest", "inspect", image_tag],
+    # )
+
+    # if (
+    #     local_digest is not None
+    #     and remote_digest is not None
+    #     and local_digest != remote_digest
+    # ):
+    #     confirm = input(
+    #         "🆕 A **NEW** version is available! Do you want to pull the latest? (y/N): "
+    #     )
+    #     if confirm.lower() in ("y", "yes"):
+    #         handle_update(image_tag)
+    handle_update(image_tag)
 
     try:
         subprocess.run(docker_cmd, check=True)

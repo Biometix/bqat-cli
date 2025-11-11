@@ -1,6 +1,6 @@
 import argparse
 
-from bqat.utils import handle_cli_update, handle_uninstall, run_container, show_version
+from bqat.utils import handle_uninstall, handle_update, run_container, show_version
 
 IMAGE_NAME = "ghcr.io/biometix/bqat-cli:latest"
 
@@ -39,7 +39,7 @@ def main() -> None:
     if args.version:
         show_version(image_tag)
     elif args.update:
-        handle_cli_update(image_tag)
+        handle_update(image_tag)
     elif args.uninstall:
         handle_uninstall(image_tag)
     else:
