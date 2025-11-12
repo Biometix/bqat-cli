@@ -1,11 +1,25 @@
-<a name="v1.9.0"></a>
+<a name="v1.8.4"></a>
 
-# v1.9.0 (2025-11-12)
+# v1.8.4 (2025-11-12)
 
 ## 🚀 Features
 
-- Provide multi-platform support (aarch64, x86_64).
 - Improve input path handling.
+- Add flag to CLI for shared memory config.
+
+## 🔧 Fixes
+
+- Resolve CSV heading empty line issue.
+- Resolve Windows data table path issue.
+
+<a name="v1.8.3"></a>
+
+# v1.8.3 (2025-11-10)
+
+## 🔧 Fixes
+
+- Resolve wsq dependency issue on arm64 platform.
+- Rework file path for fingerprint mode.
 
 <a name="v1.8.2"></a>
 

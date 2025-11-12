@@ -5,6 +5,7 @@ import platform
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 from bqat import __package__, __version__
 
@@ -369,18 +370,23 @@ def show_version(image_tag):
         )
 
 
-def run_container(image_tag, bqat_args: list[str]):
+def run_container(image_tag, bqat_args: list[str], shm_size=None):
     """Builds and executes the docker run command."""
-    current_dir = os.getcwd()
-    data_dir = os.path.join(current_dir, "data")
-
-    # Create 'data' directory if it doesn't exist (equivalent to [ ! -d data ] && mkdir data)
-    if not os.path.isdir(data_dir):
-        os.makedirs(data_dir)
 
     # Calculate SHM size
-    total_mem = get_total_memory_mb()
-    shm_size = get_shm_size(total_mem)
+    if not shm_size:
+        total_mem = get_total_memory_mb()
+        shm_size = get_shm_size(total_mem)
+
+    # Extract input folder
+    input_path = None
+    for item in bqat_args:
+        if item in ("-I", "--input"):
+            input_path = bqat_args[bqat_args.index(item) + 1]
+    if not input_path:
+        raise RuntimeError("Input folder specified (--input).")
+
+    current_dir = os.getcwd()
 
     # Build the base docker command
     docker_cmd = ["docker", "run", "--rm", "-it", f"--shm-size={shm_size}"]
@@ -388,9 +394,9 @@ def run_container(image_tag, bqat_args: list[str]):
     # Set the volume path based on the OS
     current_os = platform.system()
     if current_os in ("Linux", "Darwin"):
-        volume_path = f"{current_dir}/data:/app/data"
+        volume_path = f"{current_dir}/{input_path}:/app/{input_path}"
     elif current_os == "Windows":
-        volume_path = f"{data_dir}:/app/data"
+        volume_path = f"{os.path.join(current_dir, input_path)}:/app/{input_path}"
     else:
         print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
         sys.exit(1)
@@ -403,7 +409,9 @@ def run_container(image_tag, bqat_args: list[str]):
         show_version(image_tag)
         inner_command = ["python3 -m bqat --help"]
     else:
-        inner_command = [f"python3 -m bqat -W {current_dir} {' '.join(bqat_args)}"]
+        inner_command = [
+            f"python3 -m bqat -W {Path(current_dir).as_posix()} {' '.join(bqat_args)}"
+        ]
     docker_cmd.extend(inner_command)
 
     # # Check image update
@@ -429,7 +437,6 @@ def run_container(image_tag, bqat_args: list[str]):
     #     )
     #     if confirm.lower() in ("y", "yes"):
     #         handle_update(image_tag)
-    handle_update(image_tag)
 
     try:
         subprocess.run(docker_cmd, check=True)

@@ -51,29 +51,35 @@ Example Usage:
 # Print help information
 bqat --help
 
-# Run samples in /input with fingerprint mode as default
-bqat --input data/input/
+# Print version information
+bqat --version
 
 # Run benchmarking task
-bqat --input data/input/ --benchmarking
+bqat --benchmark
 
-# Run samples in /input with iris mode
-bqat --input data/input/ --mode iris
+# Run samples in `data` with fingerprint mode as default
+bqat --input data
+
+# Run samples in `data` with iris mode
+bqat --input data --mode iris
+
+# Run samples in `data` with iris mode and generate EDA report
+bqat --input data --mode iris --report
 
 # Search the file with name pattern in the input folder
-bqat --input data/input/ --mode iris --filename "*FINGER*"
+bqat --input data --mode iris --filename "*FINGER*"
 
 # Search the file with specific format in the input folder
-bqat --input data/input/ --mode iris --type "jp2,pgm,bmp"
+bqat --input data --mode iris --type "jp2,pgm,bmp"
 
 # Convert the files with specific formats before scanning
-bqat --input data/input/ --mode fingerprint --convert "jp2,jpeg"
+bqat --input data --mode fingerprint --convert "jp2,jpeg"
 
 # Specify the file format to convert to
-bqat --input data/input/ --mode fingerprint --target wsq
+bqat --input data --mode fingerprint --target wsq
 
-# Run samples in /input with face mode, extension function enabled, limit to 100k scan
-bqat --input data/input/ --mode face --extension --limit 100000
+# Run samples in `data` with face mode, extension function enabled, limit to 100k scan
+bqat --input data --mode face --extension --limit 100000
 ```
 
 <!-- Alternate interface:
@@ -165,18 +171,6 @@ A overview statistical report on each of the column.
 
 The log file will show some information on the process, including errors, warnings, and the total execution time of the job.
 
-## Install validation / benchmarking
-
-The tool has a benchmark module to profile the host machine. It will go through a dataset of 1000 files which consist of multiple formats and even corrupted files. The output also includes simple spec of the host machine.
-
-```sh
-# Use run.sh
-./run.sh --benchmark
-
-# OR in CLI
-docker run --rm -it --shm-size=8G bqat --benchmark
-```
-
 ## Limitations
 
 Please note that only the following file extensions (file types) are supported:
@@ -191,6 +185,10 @@ Please note that only the following file extensions (file types) are supported:
 > For fingerprint, by default, all input types will be converted to `.png`.
 
 For iris samples, if the resolution of the input is higher than 640 by 480, it will be resized.
+
+> When calling `bqat` from PowerShell, use "/" instead of "\" in the path.
+
+> When calling `bqat` from Command Prompt, wrap the path with "" (--input "path/to/folder").
 
 ## Offline Deployment
 

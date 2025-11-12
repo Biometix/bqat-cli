@@ -1,8 +1,10 @@
 import asyncio
+import time
+from pathlib import Path
 
 import click
 from rich.console import Console
-from rich.markdown import Panel
+from rich.panel import Panel
 
 from bqat import __build__ as build
 from bqat import __name__ as name
@@ -183,6 +185,8 @@ def main(
             )
             return
 
+    cwd = Path(cwd).as_posix()
+
     # if interactive:
     #     selections = menu()
     #     for k, v in selections.items():
@@ -304,7 +308,7 @@ def main(
         return
 
     if not output:
-        output = "data/results/"
+        output = (Path(input) / str(int(time.time()))).as_posix()
 
     if benchmark:
         mode = "face" if not mode else mode
