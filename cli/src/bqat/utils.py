@@ -355,6 +355,8 @@ def show_version(image_tag):
         sys_info = get_host_info()
         for key, value in sys_info.items():
             print(f"{key}: {value}")
+
+        print()
     except (
         subprocess.CalledProcessError,
         FileNotFoundError,
@@ -399,7 +401,6 @@ def run_container(image_tag, bqat_args: list[str]):
     # The command to run inside the container
     if not bqat_args:
         show_version(image_tag)
-        print()
         inner_command = ["python3 -m bqat --help"]
     else:
         inner_command = [f"python3 -m bqat -W {current_dir} {' '.join(bqat_args)}"]

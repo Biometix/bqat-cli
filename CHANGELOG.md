@@ -1,3 +1,12 @@
+<a name="v1.9.0"></a>
+
+# v1.9.0 (2025-11-12)
+
+## 🚀 Features
+
+- Provide multi-platform support (aarch64, x86_64).
+- Improve input path handling.
+
 <a name="v1.8.2"></a>
 
 # v1.8.2 (2025-11-05)
