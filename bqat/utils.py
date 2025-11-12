@@ -58,7 +58,7 @@ def to_upper(ext_list):
 #     ).to_file(report_dir)
 
 
-def write_csv(path, out="", seam=False, init=False):
+def write_csv(path, out={}, seam=False, init=False):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.parent / "header.temp"
@@ -79,7 +79,8 @@ def write_csv(path, out="", seam=False, init=False):
             f.write(data)
         temp.unlink()
     else:
-        # out = json.loads(pd.json_normalize(out).to_json(orient="index"))["0"]
+        if not isinstance(out, dict):
+            out = json.loads(pd.json_normalize(out).to_json(orient="index"))["0"]
         if os.path.exists(temp):
             with open(temp) as f:
                 header_len = len(f.readline().split(","))
