@@ -198,7 +198,7 @@ async def run(
             for path in file_globs:
                 tasks.append(
                     scan_task.remote(
-                        path,
+                        path.as_posix(),
                         output_dir,
                         log_dir,
                         mode,

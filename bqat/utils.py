@@ -98,8 +98,8 @@ def write_csv(path, out={}, seam=False, init=False):
 
 def write_log(path, out=None, init=False, finish=False):
     if init:
-        if not os.path.exists(path.rsplit("/", 1)[0]):
-            os.makedirs(path.rsplit("/", 1)[0])
+        if not os.path.exists(str(path).rsplit("/", 1)[0]):
+            os.makedirs(str(path).rsplit("/", 1)[0])
         with open(path, "w") as f:
             f.write("[")
     elif finish:
