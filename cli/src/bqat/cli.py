@@ -28,6 +28,10 @@ def main() -> None:
         "--tag",
         help="Specify container image tag.",
     )
+    parser.add_argument(
+        "--shm",
+        help="Specify shared memory size for the container (e.g., 8192MB).",
+    )
 
     args, unknown_args = parser.parse_known_args()
 
@@ -43,7 +47,7 @@ def main() -> None:
     elif args.uninstall:
         handle_uninstall(image_tag)
     else:
-        run_container(image_tag, unknown_args)
+        run_container(image_tag, unknown_args, args.shm)
 
 
 if __name__ == "__main__":

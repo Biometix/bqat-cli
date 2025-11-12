@@ -12,12 +12,13 @@ BQAT (Biometric Quality Assessment Tool) is an open-source tool designed for ass
 
 ## Highlights
 
-- 🚀 A single tool for data analysis workflow with BQAT, and more.
+- 🚀 A simple Python interface for running `BQAT` workflow, and more.
 - 🖥️ Supports macOS, Linux, and Windows.
 
 ## Prerequisites
 
 - [Docker](https://www.docker.com/)
+- x86-64 or ARMv9 CPU
 
 ## Quick Start
 
@@ -41,20 +42,23 @@ BQAT (Biometric Quality Assessment Tool) is an open-source tool designed for ass
 
 4. Run BQAT analysis
 
-    Create a `/data` folder in your working directory for input data.
+    ```sh
+    bqat --mode face --input data/face
+    ```
+
+5. Run BQAT analysis and compile a EDA report
 
     ```sh
-    bqat --input data/test --mode face
+    bqat --mode fingerprint --input data/fingerprint --report
     ```
 
 ## Flags for BQAT
 
-Please refer to the documentation of [BQAT](https://biometix.github.io/).
+Please refer to the documentation of [BQAT](https://biometix.github.io/) further details.
 
-## Flags for the CLI
+## Flags for the Python CLI
 
 | Flag | Description |
-| --- | --- |
 | --- | --- |
 | --help | Print help info. |
 | --version, -v | Display version info. |

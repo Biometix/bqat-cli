@@ -46,29 +46,35 @@ Example Usage:
 # Print help information
 bqat --help
 
-# Run samples in /input with fingerprint mode as default
-bqat --input data/input/
+# Print version information
+bqat --version
 
 # Run benchmarking task
-bqat --input data/input/ --benchmarking
+bqat --benchmark
 
-# Run samples in /input with iris mode
-bqat --input data/input/ --mode iris
+# Run samples in `data` with fingerprint mode as default
+bqat --input data
+
+# Run samples in `data` with iris mode
+bqat --input data --mode iris
+
+# Run samples in `data` with iris mode and generate EDA report
+bqat --input data --mode iris --report
 
 # Search the file with name pattern in the input folder
-bqat --input data/input/ --mode iris --filename "*FINGER*"
+bqat --input data --mode iris --filename "*FINGER*"
 
 # Search the file with specific format in the input folder
-bqat --input data/input/ --mode iris --type "jp2,pgm,bmp"
+bqat --input data --mode iris --type "jp2,pgm,bmp"
 
 # Convert the files with specific formats before scanning
-bqat --input data/input/ --mode fingerprint --convert "jp2,jpeg"
+bqat --input data --mode fingerprint --convert "jp2,jpeg"
 
 # Specify the file format to convert to
-bqat --input data/input/ --mode fingerprint --target wsq
+bqat --input data --mode fingerprint --target wsq
 
-# Run samples in /input with face mode, extension function enabled, limit to 100k scan
-bqat --input data/input/ --mode face --extension --limit 100000
+# Run samples in `data` with face mode, extension function enabled, limit to 100k scan
+bqat --input data --mode face --extension --limit 100000
 ```
 
 ### Optional Flags
