@@ -74,73 +74,73 @@ def get_shm_size(total_memory_mb):
     return "8192MB"
 
 
-def get_digest_from_cli(command):
-    """
-    Executes a Docker CLI command and extracts the image digest.
+# def get_digest_from_cli(command):
+#     """
+#     Executes a Docker CLI command and extracts the image digest.
 
-    :param command: The full command as a list (e.g., ['docker', 'manifest', 'inspect', 'image:tag']).
-    :return: The image digest (SHA-256 hash) as a string, or None if not found/error.
-    """
-    try:
-        # Run the command and capture the output
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+#     :param command: The full command as a list (e.g., ['docker', 'manifest', 'inspect', 'image:tag']).
+#     :return: The image digest (SHA-256 hash) as a string, or None if not found/error.
+#     """
+#     try:
+#         # Run the command and capture the output
+#         result = subprocess.run(command, capture_output=True, text=True, check=True)
 
-        # The output is a JSON string
-        manifest_data = json.loads(result.stdout)
+#         # The output is a JSON string
+#         manifest_data = json.loads(result.stdout)
 
-        # The digest is usually stored in the 'Descriptor' key for 'docker manifest inspect'
-        # or the first element of 'RepoDigests' for a local 'docker inspect'.
+#         # The digest is usually stored in the 'Descriptor' key for 'docker manifest inspect'
+#         # or the first element of 'RepoDigests' for a local 'docker inspect'.
 
-        # Check for remote manifest digest
-        if isinstance(manifest_data, dict) and "Descriptor" in manifest_data:
-            return manifest_data["Descriptor"]["digest"]
+#         # Check for remote manifest digest
+#         if isinstance(manifest_data, dict) and "Descriptor" in manifest_data:
+#             return manifest_data["Descriptor"]["digest"]
 
-        # Check for local image digest (which is often returned as a list of repo digests)
-        elif (
-            isinstance(manifest_data, list)
-            and manifest_data
-            and "RepoDigests" in manifest_data[0]
-        ):
-            # Expecting a list of digests in the format 'repo@sha256:...'
-            return manifest_data[0]["Id"]
+#         # Check for local image digest (which is often returned as a list of repo digests)
+#         elif (
+#             isinstance(manifest_data, list)
+#             and manifest_data
+#             and "RepoDigests" in manifest_data[0]
+#         ):
+#             # Expecting a list of digests in the format 'repo@sha256:...'
+#             return manifest_data[0]["Id"]
 
-        # Handle the raw manifest digest if it's the only thing returned
-        # This handles cases where docker manifest inspect returns a list of manifests for multi-arch images
-        elif (
-            isinstance(manifest_data, list)
-            and manifest_data
-            and "digest" in manifest_data[0]
-        ):
-            # For a multi-arch manifest list, we take the digest of the list itself
-            return manifest_data[0].get(
-                "digest"
-            )  # This is less precise but safer for general use
+#         # Handle the raw manifest digest if it's the only thing returned
+#         # This handles cases where docker manifest inspect returns a list of manifests for multi-arch images
+#         elif (
+#             isinstance(manifest_data, list)
+#             and manifest_data
+#             and "digest" in manifest_data[0]
+#         ):
+#             # For a multi-arch manifest list, we take the digest of the list itself
+#             return manifest_data[0].get(
+#                 "digest"
+#             )  # This is less precise but safer for general use
 
-        # Check for remote manifest digest for multi-platform build
-        if isinstance(manifest_data, dict) and "manifests" in manifest_data:
-            arch = get_host_arch()
-            for manifest in manifest_data["manifests"]:
-                if manifest["platform"]["architecture"] == arch:
-                    return manifest["digest"]
+#         # Check for remote manifest digest for multi-platform build
+#         if isinstance(manifest_data, dict) and "manifests" in manifest_data:
+#             arch = get_host_arch()
+#             for manifest in manifest_data["manifests"]:
+#                 if manifest["platform"]["architecture"] == arch:
+#                     return manifest["digest"]
 
-        # Final fallback if parsing is tricky:
-        if isinstance(manifest_data, dict) and "digest" in manifest_data.get(
-            "config", {}
-        ):
-            return manifest_data["config"]["digest"]
+#         # Final fallback if parsing is tricky:
+#         if isinstance(manifest_data, dict) and "digest" in manifest_data.get(
+#             "config", {}
+#         ):
+#             return manifest_data["config"]["digest"]
 
-    except subprocess.CalledProcessError as e:
-        # Handles errors like "No such image" or "manifest unknown"
-        if "No such image" in e.stderr or "manifest unknown" in e.stderr:
-            return None
-        print(f"Error executing command: {' '.join(command)}\n{e.stderr.strip()}")
-        return None
-    except json.JSONDecodeError:
-        print("Error: Failed to parse JSON output from Docker CLI.")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None
+#     except subprocess.CalledProcessError as e:
+#         # Handles errors like "No such image" or "manifest unknown"
+#         if "No such image" in e.stderr or "manifest unknown" in e.stderr:
+#             return None
+#         print(f"Error executing command: {' '.join(command)}\n{e.stderr.strip()}")
+#         return None
+#     except json.JSONDecodeError:
+#         print("Error: Failed to parse JSON output from Docker CLI.")
+#         return None
+#     except Exception as e:
+#         print(f"An unexpected error occurred: {e}")
+#         return None
 
 
 # def check_update(image_tag) -> bool:
