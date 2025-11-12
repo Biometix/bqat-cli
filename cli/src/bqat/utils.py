@@ -74,130 +74,131 @@ def get_shm_size(total_memory_mb):
     return "8192MB"
 
 
-def get_digest_from_cli(command):
-    """
-    Executes a Docker CLI command and extracts the image digest.
+# def get_digest_from_cli(command):
+#     """
+#     Executes a Docker CLI command and extracts the image digest.
 
-    :param command: The full command as a list (e.g., ['docker', 'manifest', 'inspect', 'image:tag']).
-    :return: The image digest (SHA-256 hash) as a string, or None if not found/error.
-    """
-    try:
-        # Run the command and capture the output
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+#     :param command: The full command as a list (e.g., ['docker', 'manifest', 'inspect', 'image:tag']).
+#     :return: The image digest (SHA-256 hash) as a string, or None if not found/error.
+#     """
+#     try:
+#         # Run the command and capture the output
+#         result = subprocess.run(command, capture_output=True, text=True, check=True)
 
-        # The output is a JSON string
-        manifest_data = json.loads(result.stdout)
+#         # The output is a JSON string
+#         manifest_data = json.loads(result.stdout)
 
-        # The digest is usually stored in the 'Descriptor' key for 'docker manifest inspect'
-        # or the first element of 'RepoDigests' for a local 'docker inspect'.
+#         # The digest is usually stored in the 'Descriptor' key for 'docker manifest inspect'
+#         # or the first element of 'RepoDigests' for a local 'docker inspect'.
 
-        # Check for remote manifest digest
-        if isinstance(manifest_data, dict) and "Descriptor" in manifest_data:
-            return manifest_data["Descriptor"]["digest"]
+#         # Check for remote manifest digest
+#         if isinstance(manifest_data, dict) and "Descriptor" in manifest_data:
+#             return manifest_data["Descriptor"]["digest"]
 
-        # Check for local image digest (which is often returned as a list of repo digests)
-        elif (
-            isinstance(manifest_data, list)
-            and manifest_data
-            and "RepoDigests" in manifest_data[0]
-        ):
-            # Expecting a list of digests in the format 'repo@sha256:...'
-            repo_digests = manifest_data[0]["Id"]
-            if repo_digests:
-                # Return the part after '@' for the first digest
-                return repo_digests[0].split("@")[-1]
+#         # Check for local image digest (which is often returned as a list of repo digests)
+#         elif (
+#             isinstance(manifest_data, list)
+#             and manifest_data
+#             and "RepoDigests" in manifest_data[0]
+#         ):
+#             # Expecting a list of digests in the format 'repo@sha256:...'
+#             return manifest_data[0]["Id"]
 
-        # Handle the raw manifest digest if it's the only thing returned
-        # This handles cases where docker manifest inspect returns a list of manifests for multi-arch images
-        elif (
-            isinstance(manifest_data, list)
-            and manifest_data
-            and "digest" in manifest_data[0]
-        ):
-            # For a multi-arch manifest list, we take the digest of the list itself
-            return manifest_data[0].get(
-                "digest"
-            )  # This is less precise but safer for general use
+#         # Handle the raw manifest digest if it's the only thing returned
+#         # This handles cases where docker manifest inspect returns a list of manifests for multi-arch images
+#         elif (
+#             isinstance(manifest_data, list)
+#             and manifest_data
+#             and "digest" in manifest_data[0]
+#         ):
+#             # For a multi-arch manifest list, we take the digest of the list itself
+#             return manifest_data[0].get(
+#                 "digest"
+#             )  # This is less precise but safer for general use
 
-        # Check for remote manifest digest for multi-platform build
-        if isinstance(manifest_data, dict) and "manifests" in manifest_data:
-            arch = get_host_arch()
-            for manifest in manifest_data["manifests"]:
-                if manifest["platform"]["architecture"] == arch:
-                    return manifest["digest"]
+#         # Check for remote manifest digest for multi-platform build
+#         if isinstance(manifest_data, dict) and "manifests" in manifest_data:
+#             arch = get_host_arch()
+#             for manifest in manifest_data["manifests"]:
+#                 if manifest["platform"]["architecture"] == arch:
+#                     return manifest["digest"]
 
-        # Final fallback if parsing is tricky:
-        if isinstance(manifest_data, dict) and "digest" in manifest_data.get(
-            "config", {}
-        ):
-            return manifest_data["config"]["digest"]
+#         # Final fallback if parsing is tricky:
+#         if isinstance(manifest_data, dict) and "digest" in manifest_data.get(
+#             "config", {}
+#         ):
+#             return manifest_data["config"]["digest"]
 
-    except subprocess.CalledProcessError as e:
-        # Handles errors like "No such image" or "manifest unknown"
-        if "No such image" in e.stderr or "manifest unknown" in e.stderr:
-            return None
-        print(f"Error executing command: {' '.join(command)}\n{e.stderr.strip()}")
-        return None
-    except json.JSONDecodeError:
-        print("Error: Failed to parse JSON output from Docker CLI.")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None
+#     except subprocess.CalledProcessError as e:
+#         # Handles errors like "No such image" or "manifest unknown"
+#         if "No such image" in e.stderr or "manifest unknown" in e.stderr:
+#             return None
+#         print(f"Error executing command: {' '.join(command)}\n{e.stderr.strip()}")
+#         return None
+#     except json.JSONDecodeError:
+#         print("Error: Failed to parse JSON output from Docker CLI.")
+#         return None
+#     except Exception as e:
+#         print(f"An unexpected error occurred: {e}")
+#         return None
 
 
-def check_update(image_tag) -> bool:
-    """
-    Checks if a newer version of the 'bqat-cli' Docker image is available.
+# def check_update(image_tag) -> bool:
+#     """
+#     Checks if a newer version of the 'bqat-cli' Docker image is available.
 
-    Returns:
-        bool: True if an update is available, False otherwise.
-    """
-    try:
-        # 1. Get Local Image Digest
-        # We use `docker inspect` with a format filter to get JSON containing RepoDigests
-        local_command = ["docker", "inspect", image_tag, "--format", "json"]
-        local_digest = get_digest_from_cli(local_command)
+#     Returns:
+#         bool: True if an update is available, False otherwise.
+#     """
+#     try:
+#         # 1. Get Local Image Digest
+#         # We use `docker inspect` with a format filter to get JSON containing RepoDigests
+#         local_command = ["docker", "inspect", image_tag, "--format", "json"]
+#         local_digest = get_digest_from_cli(local_command)
+#         digest_tag = f"{image_tag.split(':', 1)[0]}@{local_digest}"
+#         local_digest = get_digest_from_cli(
+#             ["docker", "manifest", "inspect", digest_tag],
+#         )
 
-        # 2. Get Remote Image Digest (without pulling)
-        # We use `docker manifest inspect` to query the registry directly
-        remote_command = ["docker", "manifest", "inspect", image_tag]
-        remote_digest = get_digest_from_cli(remote_command)
+#         # 2. Get Remote Image Digest (without pulling)
+#         # We use `docker manifest inspect` to query the registry directly
+#         remote_command = ["docker", "manifest", "inspect", image_tag]
+#         remote_digest = get_digest_from_cli(remote_command)
 
-        print(f"Local Image Digest:  {local_digest or 'N/A'}")
-        print(f"Remote Image Digest: {remote_digest or 'N/A'}")
+#         print(f"Local Image Digest:  {local_digest or 'N/A'}")
+#         print(f"Remote Image Digest: {remote_digest or 'N/A'}")
 
-        # 3. Compare Digests
-        if local_digest is None and remote_digest is None:
-            print(
-                "🛑 Neither local image nor remote manifest could be retrieved. Cannot determine status."
-            )
-            return True  # No image, so consider an "update" (initial pull) to be available.
-        elif local_digest is None and remote_digest:
-            print(
-                "✅ Image not found locally, but remote version exists. **New image available** (or needs initial pull)."
-            )
-            return True  # No image, so consider an "update" (initial pull) to be available.
-        elif local_digest and remote_digest is None:
-            print(
-                "⚠️ Local image exists, but remote manifest check failed (e.g., image deleted, auth issue). Status uncertain."
-            )
-            return False
-        elif local_digest == remote_digest:
-            print("👍 The local image is **UP-TO-DATE** with the remote registry.")
-            return False
-        elif local_digest != remote_digest:
-            print("🚨 A **NEW** version of the image is available in the registry!")
-            return True
+#         # 3. Compare Digests
+#         if local_digest is None and remote_digest is None:
+#             print(
+#                 "🛑 Neither local image nor remote manifest could be retrieved. Cannot determine status."
+#             )
+#             return True  # No image, so consider an "update" (initial pull) to be available.
+#         elif local_digest is None and remote_digest:
+#             print(
+#                 "✅ Image not found locally, but remote version exists. **New image available** (or needs initial pull)."
+#             )
+#             return True  # No image, so consider an "update" (initial pull) to be available.
+#         elif local_digest and remote_digest is None:
+#             print(
+#                 "⚠️ Local image exists, but remote manifest check failed (e.g., image deleted, auth issue). Status uncertain."
+#             )
+#             return False
+#         elif local_digest == remote_digest:
+#             print("👍 The local image is **UP-TO-DATE** with the remote registry.")
+#             return False
+#         elif local_digest != remote_digest:
+#             print("🚨 A **NEW** version of the image is available in the registry!")
+#             return True
 
-    except (
-        subprocess.CalledProcessError,
-        FileNotFoundError,
-    ):
-        # If docker pull fails, it could be because the image doesn't exist locally yet,
-        # or Docker isn't running. In either case, we can consider an "update" (initial pull)
-        # to be available.
-        return True
+#     except (
+#         subprocess.CalledProcessError,
+#         FileNotFoundError,
+#     ):
+#         # If docker pull fails, it could be because the image doesn't exist locally yet,
+#         # or Docker isn't running. In either case, we can consider an "update" (initial pull)
+#         # to be available.
+#         return True
 
 
 def handle_update(image_tag):
@@ -209,22 +210,20 @@ def handle_update(image_tag):
             ["docker", "pull", f"{image_tag}"],
             check=True,
         )
+        # # Inspect to show the version
+        # result = subprocess.run(
+        #     ["docker", "inspect", f"{image_tag}"],
+        #     capture_output=True,
+        #     text=True,
+        #     check=True,
+        # )
+        # image_info = json.loads(result.stdout)
+        # labels = image_info[0].get("Config", {}).get("Labels", {})
+        # image_version = labels.get("bqat.cli.version", "not found")
+        # core_version = labels.get("bqat.core.version", "not found")
 
-        # Inspect to show the version
-        print("\nImage version information:")
-        result = subprocess.run(
-            ["docker", "inspect", f"{image_tag}"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        image_info = json.loads(result.stdout)
-        labels = image_info[0].get("Config", {}).get("Labels", {})
-        image_version = labels.get("bqat.cli.version", "not found")
-        core_version = labels.get("bqat.core.version", "not found")
-
-        print(f'  "bqat.cli.version": "{image_version}"')
-        print(f'  "bqat.core.version": "{core_version}"')
+        # print(f"BQAT-CLI container version: {image_version}")
+        # print(f"BQAT-Core version: {core_version}\n")
     except subprocess.CalledProcessError as e:
         error_output = (
             e.stderr.strip() if e.stderr else "See the output above for details."
@@ -311,15 +310,15 @@ def handle_uninstall(image_tag):
         print("\nAborted")
 
 
-def handle_cli_update(image_tag):
-    """Handles the update check and process."""
-    print(f'Checking for updates to "{image_tag}"...')
-    if check_update(image_tag):
-        confirm = input("> Do you want to pull the latest? (y/N): ")
-        if confirm.lower() in ("y", "yes"):
-            handle_update(image_tag)
-    else:
-        print(f"Your '{image_tag}' image is up to date.")
+# def handle_cli_update(image_tag):
+#     """Handles the update check and process."""
+#     print(f'Checking for updates to "{image_tag}"...')
+#     if check_update(image_tag):
+#         confirm = input("> Do you want to pull the latest? (y/N): ")
+#         if confirm.lower() in ("y", "yes"):
+#             handle_update(image_tag)
+#     else:
+#         print(f"Your '{image_tag}' image is up to date.")
 
 
 def show_version(image_tag):
@@ -406,23 +405,30 @@ def run_container(image_tag, bqat_args: list[str]):
         inner_command = [f"python3 -m bqat -W {current_dir} {' '.join(bqat_args)}"]
     docker_cmd.extend(inner_command)
 
-    # Check image update
-    local_digest = get_digest_from_cli(
-        ["docker", "inspect", image_tag, "--format", "json"],
-    )
-    remote_digest = get_digest_from_cli(
-        ["docker", "manifest", "inspect", image_tag],
-    )
-    if (
-        local_digest is not None
-        and remote_digest is not None
-        and local_digest != remote_digest
-    ):
-        confirm = input(
-            "🆕 A **NEW** version is available! Do you want to pull the latest? (y/N): "
-        )
-        if confirm.lower() in ("y", "yes"):
-            handle_update(image_tag)
+    # # Check image update
+    # local_digest = get_digest_from_cli(
+    #     ["docker", "inspect", image_tag, "--format", "json"],
+    # )
+    # digest_tag = f"{image_tag.split(':', 1)[0]}@{local_digest}"
+    # local_digest = get_digest_from_cli(
+    #     ["docker", "manifest", "inspect", digest_tag],
+    # )
+
+    # remote_digest = get_digest_from_cli(
+    #     ["docker", "manifest", "inspect", image_tag],
+    # )
+
+    # if (
+    #     local_digest is not None
+    #     and remote_digest is not None
+    #     and local_digest != remote_digest
+    # ):
+    #     confirm = input(
+    #         "🆕 A **NEW** version is available! Do you want to pull the latest? (y/N): "
+    #     )
+    #     if confirm.lower() in ("y", "yes"):
+    #         handle_update(image_tag)
+    handle_update(image_tag)
 
     try:
         subprocess.run(docker_cmd, check=True)

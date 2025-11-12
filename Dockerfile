@@ -111,23 +111,24 @@ COPY Pipfile Pipfile.lock /app/
 
 COPY tests /app/tests/
 
-RUN set -e && apt update && apt -y --no-install-recommends install python3-pip libblas-dev liblapack-dev libsndfile1 build-essential cmake python3-dev ninja-build && \
+RUN echo "Building target ${TARGETARCH} on $(uname -m) platform."; \
+    set -e && apt update && apt -y --no-install-recommends install python3-pip libblas-dev liblapack-dev libsndfile1 build-essential cmake git python3-dev ninja-build && \
     python3 -m pip install pipenv && \
     if [ "${DEV}" == "true" ]; \
     then pipenv requirements --dev > requirements.txt; \
     else pipenv requirements > requirements.txt; \
-    fi; \
+    fi && \
     if [ "$TARGETARCH" = "arm64" ]; \
     then \
     git clone https://github.com/KaveIO/PhiK.git && cd PhiK && git checkout tags/v0.12.5 && cd .. && python3 -m pip install PhiK/ && \
     python3 -m pip install BQAT/wsq*.whl; \
     else \
     python3 -m pip install wsq; \
-    fi; \
+    fi && \
     python3 -m pip uninstall -y pipenv && \
     python3 -m pip install -r requirements.txt && \
     python3 -m compileall . && \
-    apt remove -y --purge python3-pip build-essential cmake python3-dev ninja-build && \
+    apt remove -y --purge python3-pip build-essential git cmake python3-dev ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
 # RUN mkdir -p /root/.deepface/weights && \

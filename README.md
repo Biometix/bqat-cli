@@ -8,13 +8,6 @@ Biometric Quality Assessment Tool (BQAT) - CLI
 <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/biometix/bqat-cli">
 <img alt="GitHub" src="https://img.shields.io/github/license/biometix/bqat-cli">
 
-[![Build Status](https://github.com/Biometix/bqat-cli/actions/workflows/build.yml/badge.svg)](https://github.com/Biometix/bqat-cli/actions/workflows/build.yml)
-[![Test Status](https://github.com/Biometix/bqat-cli/actions/workflows/test.yml/badge.svg)](https://github.com/Biometix/bqat-cli/actions/workflows/test.yml)
-[![Release Status](https://github.com/Biometix/bqat-cli/actions/workflows/release.yml/badge.svg)](https://github.com/Biometix/bqat-cli/actions/workflows/release.yml)
-[![Tests Status](./reports/junit/tests-badge.svg?dummy=8585744)](https://htmlpreview.github.io/?https://github.com/Biometix/bqat-cli/blob/main/reports/junit/report.html)
-[![Coverage Status](./reports/coverage/coverage-badge.svg?dummy=8585744)](https://htmlpreview.github.io/?https://github.com/Biometix/bqat-cli/blob/main/reports/coverage/index.html)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-
 [![PyPI - Version](https://img.shields.io/pypi/v/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Format](https://img.shields.io/pypi/format/bqat)](https://pypi.python.org/pypi/bqat)
