@@ -69,7 +69,7 @@ def write_csv(path, out={}, seam=False, init=False):
 
     if seam:
         with open(temp) as f:
-            header = f.read().rstrip().split(",")
+            header = f.readline().rstrip().split(",")
         with open(path) as f:
             data = f.read()
         with open(path, "w") as f:
@@ -78,6 +78,8 @@ def write_csv(path, out={}, seam=False, init=False):
         with open(path, "a") as f:
             f.write(data)
         temp.unlink()
+    elif not out:
+        return
     else:
         if not isinstance(out, dict):
             out = json.loads(pd.json_normalize(out).to_json(orient="index"))["0"]

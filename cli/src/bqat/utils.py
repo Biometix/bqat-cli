@@ -383,8 +383,6 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
     for item in bqat_args:
         if item in ("-I", "--input"):
             input_path = bqat_args[bqat_args.index(item) + 1]
-    if not input_path:
-        raise RuntimeError("Input folder specified (--input).")
 
     current_dir = os.getcwd()
 
