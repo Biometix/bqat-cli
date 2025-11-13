@@ -4,7 +4,7 @@
 
 ## 🚀 Features
 
-- Improve input path handling.
+- Improve input/output path handling.
 - Add flag to CLI for shared memory config.
 
 ## 🔧 Fixes

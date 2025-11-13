@@ -370,6 +370,13 @@ def show_version(image_tag):
         )
 
 
+def is_subdir(child: Path, parent: Path) -> bool:
+    try:
+        return child.is_relative_to(parent)
+    except ValueError:
+        return False
+
+
 def run_container(image_tag, bqat_args: list[str], shm_size=None):
     """Builds and executes the docker run command."""
 
@@ -378,30 +385,76 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         total_mem = get_total_memory_mb()
         shm_size = get_shm_size(total_mem)
 
-    # Extract input folder
-    input_path = None
-    for item in bqat_args:
-        if item in ("-I", "--input"):
-            input_path = bqat_args[bqat_args.index(item) + 1]
-    if not input_path:
-        raise RuntimeError("Input folder specified (--input).")
-
-    current_dir = os.getcwd()
-
     # Build the base docker command
     docker_cmd = ["docker", "run", "--rm", "-it", f"--shm-size={shm_size}"]
 
-    # Set the volume path based on the OS
-    current_os = platform.system()
-    if current_os in ("Linux", "Darwin"):
-        volume_path = f"{current_dir}/{input_path}:/app/{input_path}"
-    elif current_os == "Windows":
-        volume_path = f"{os.path.join(current_dir, input_path)}:/app/{input_path}"
-    else:
-        print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
-        sys.exit(1)
+    # Optional CWD for reporting
+    current_dir = os.getcwd()
 
-    docker_cmd.extend(["-v", volume_path])
+    # Check input folder flag
+    for item in bqat_args:
+        if item in ("-I", "--input"):
+            input_path = Path(bqat_args.pop(bqat_args.index(item) + 1))
+            bqat_args.remove(item)
+            break
+        input_path = None
+
+    if input_path:
+        # Sanitise input path
+        if not input_path.exists() or not input_path.is_dir():
+            print(f"Invalid input path: {input_path}.")
+            sys.exit(1)
+        else:
+            input_path = input_path.as_posix()
+            bqat_args.extend(["--input", f"'{input_path}'"])
+
+        # Set the volume path based on the OS
+        current_os = platform.system()
+        if current_os in ("Linux", "Darwin"):
+            volume_path = f"{current_dir}/{input_path}:/app/{input_path}"
+        elif current_os == "Windows":
+            volume_path = f"{os.path.join(current_dir, input_path)}:/app/{input_path}"
+        else:
+            print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
+            sys.exit(1)
+
+        docker_cmd.extend(["-v", volume_path])
+
+    # Check output folder flag
+    for item in bqat_args:
+        if item in ("-O", "--output"):
+            output_path = Path(bqat_args.pop(bqat_args.index(item) + 1))
+            bqat_args.remove(item)
+            break
+        output_path = None
+
+    if output_path and not is_subdir(output_path, Path(input_path)):
+        # Sanitise output path
+        try:
+            if not output_path.exists():
+                output_path.mkdir(parents=True)
+            elif not output_path.is_dir():
+                print(f"Invalid output path: {output_path}.")
+                sys.exit(1)
+        except Exception as e:
+            print("Failed to create output folder:", str(e))
+            sys.exit(1)
+
+        output_path = output_path.as_posix()
+        bqat_args.extend(["--output", f"'{output_path}'"])
+
+        # Set the volume path based on the OS
+        current_os = platform.system()
+        if current_os in ("Linux", "Darwin"):
+            volume_path = f"{current_dir}/{output_path}:/app/{output_path}"
+        elif current_os == "Windows":
+            volume_path = f"{os.path.join(current_dir, output_path)}:/app/{output_path}"
+        else:
+            print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
+            sys.exit(1)
+
+        docker_cmd.extend(["-v", volume_path])
+
     docker_cmd.append(image_tag)
 
     # The command to run inside the container
@@ -410,7 +463,7 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         inner_command = ["python3 -m bqat --help"]
     else:
         inner_command = [
-            f"python3 -m bqat -W {Path(current_dir).as_posix()} {' '.join(bqat_args)}"
+            f"python3 -m bqat -W '{Path(current_dir).as_posix()}' {' '.join(bqat_args)}"
         ]
     docker_cmd.extend(inner_command)
 
@@ -449,4 +502,5 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
     except subprocess.CalledProcessError as e:
         # The subprocess will have already printed its stderr.
         # We exit with the same return code as the docker command.
+        print(f"{bqat_args=}")
         sys.exit(e.returncode)

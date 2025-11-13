@@ -1,3 +1,3 @@
-__version__ = "1.8.2"
+__version__ = "1.8.4"
 __name__ = "Biometric Quality Assessment Tool"
-__build__ = "05112025"
+__build__ = "13112025"
