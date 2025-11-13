@@ -26,7 +26,7 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
 @click.option(
     "--mode",
     "-M",
-    default="",
+    default="face",
     help="Specify BQAT running mode (Fingerprint, Face, Iris, Speech).",
 )
 @click.option(

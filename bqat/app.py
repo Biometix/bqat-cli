@@ -527,6 +527,7 @@ async def benchmark(
         "Throughput": f"{file_count / test_timer:.2f} it/s",
         "System Info": {
             "python_version": get_cpu_info().get("python_version"),
+            "cpu_vendor": get_cpu_info().get("vendor_id_raw", None),
             "cpu_name": get_cpu_info().get("brand_raw", None),
             "cpu_arch": get_cpu_info().get("arch_string_raw", None),
             "physical_cores:": psutil.cpu_count(logical=False),
