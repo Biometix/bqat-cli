@@ -378,28 +378,37 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         total_mem = get_total_memory_mb()
         shm_size = get_shm_size(total_mem)
 
-    # Extract input folder
-    input_path = None
-    for item in bqat_args:
-        if item in ("-I", "--input"):
-            input_path = bqat_args[bqat_args.index(item) + 1]
-
-    current_dir = os.getcwd()
-
     # Build the base docker command
     docker_cmd = ["docker", "run", "--rm", "-it", f"--shm-size={shm_size}"]
 
-    # Set the volume path based on the OS
-    current_os = platform.system()
-    if current_os in ("Linux", "Darwin"):
-        volume_path = f"{current_dir}/{input_path}:/app/{input_path}"
-    elif current_os == "Windows":
-        volume_path = f"{os.path.join(current_dir, input_path)}:/app/{input_path}"
-    else:
-        print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
-        sys.exit(1)
+    # Optional CWD for reporting
+    current_dir = os.getcwd()
 
-    docker_cmd.extend(["-v", volume_path])
+    # Extract input folder
+    for item in bqat_args:
+        if item in ("-I", "--input"):
+            input_path = bqat_args[bqat_args.index(item) + 1]
+            break
+        input_path = None
+
+    if input_path:
+        # Check input path
+        if not Path(input_path).is_dir() or not Path(input_path).exists:
+            print(f"Error. Invalid input path: {input_path}.")
+            sys.exit(1)
+
+        # Set the volume path based on the OS
+        current_os = platform.system()
+        if current_os in ("Linux", "Darwin"):
+            volume_path = f"{current_dir}/{input_path}:/app/{input_path}"
+        elif current_os == "Windows":
+            volume_path = f"{os.path.join(current_dir, input_path)}:/app/{input_path}"
+        else:
+            print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
+            sys.exit(1)
+
+        docker_cmd.extend(["-v", volume_path])
+
     docker_cmd.append(image_tag)
 
     # The command to run inside the container
