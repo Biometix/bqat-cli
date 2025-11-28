@@ -1,6 +1,5 @@
 import atexit
 import json
-import os
 import platform
 import re
 import subprocess
@@ -202,8 +201,8 @@ def get_shm_size(total_memory_mb):
 #         return True
 
 
-def handle_update(image_tag):
-    """Handles the Docker update/pull logic."""
+def handle_update(image_tag, package_name="bqat"):
+    """Handles the BQAT CLI update logic."""
     print("Pulling the latest 'bqat-cli' image...")
     try:
         # Pull the image
@@ -240,6 +239,60 @@ def handle_update(image_tag):
         )
     except (json.JSONDecodeError, IndexError) as e:
         print(f"Error parsing Docker image information: {e}", file=sys.stderr)
+
+    # Get the current version of the package
+    try:
+        current_version = subprocess.check_output(
+            [sys.executable, "-m", "pip", "show", package_name],
+            stderr=subprocess.STDOUT,
+        ).decode("utf-8")
+
+        for line in current_version.splitlines():
+            if line.startswith("Version:"):
+                current_version = line.split(" ")[1]
+                break
+    except subprocess.CalledProcessError as e:
+        print(
+            f"Error getting the current version of {package_name}: {e.output.decode('utf-8')}"
+        )
+        return
+
+    # Check for outdated packages using pip list --outdated
+    try:
+        outdated = subprocess.check_output(
+            [sys.executable, "-m", "pip", "list", "--outdated"],
+            stderr=subprocess.STDOUT,
+        ).decode("utf-8")
+
+        if package_name in outdated:
+            # Extract the latest version from the output
+            for line in outdated.splitlines():
+                if package_name in line:
+                    _, latest_version = line.split()[
+                        :2
+                    ]  # Get the package name and latest version
+                    print(
+                        f"A new version of '{package_name}' is available: {latest_version}. You have version {current_version}."
+                    )
+                    break
+        else:
+            print(
+                f"The installed '{package_name}' is up-to-date (version {current_version})."
+            )
+            return
+    except Exception as e:
+        print(f"Error checking for outdated packages: {str(e)}")
+        return
+
+    # Upgrade the package if a new version is available
+    print("Upgrading package...")
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--upgrade", package_name]
+        )
+        print(f"Successfully upgraded '{package_name}' to version {latest_version}.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error upgrading '{package_name}': {e.output.decode('utf-8')}")
 
 
 def delete_image(image_tag):
@@ -389,41 +442,38 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
     docker_cmd = ["docker", "run", "--rm", "-it", f"--shm-size={shm_size}"]
 
     # Optional CWD for reporting
-    current_dir = os.getcwd()
+    current_dir = Path.cwd()
 
     # Check input folder flag
     for item in bqat_args:
         if item in ("-I", "--input"):
-            input_path = Path(bqat_args.pop(bqat_args.index(item) + 1))
+            input_path = Path(Path(bqat_args.pop(bqat_args.index(item) + 1)).resolve())
             bqat_args.remove(item)
             break
         input_path = None
 
     if input_path:
         # Sanitise input path
-        if not input_path.exists() or not input_path.is_dir():
-            print(f"Invalid input path: {input_path}.")
+        if not input_path.exists():
+            print(f"Exit. Input path not found: {input_path}")
             sys.exit(1)
-        else:
-            input_path = input_path.as_posix()
-            bqat_args.extend(["--input", f"'{input_path}'"])
-
-        # Set the volume path based on the OS
-        current_os = platform.system()
-        if current_os in ("Linux", "Darwin"):
-            volume_path = f"{current_dir}/{input_path}:/app/{input_path}"
-        elif current_os == "Windows":
-            volume_path = f"{os.path.join(current_dir, input_path)}:/app/{input_path}"
-        else:
-            print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
+        if not input_path.is_dir():
+            print(f"Exit. Input path not a folder: {input_path}")
             sys.exit(1)
+        if not input_path.is_relative_to(current_dir):  # Handle '..'
+            current_dir = input_path.parent
+        elif input_path.relative_to(current_dir).as_posix() == ".":  # Handle '.'
+            current_dir = current_dir.parent
+        input_mount = input_path.relative_to(current_dir)
+        bqat_args.extend(["--input", f"'{input_mount}'"])
+        volume_path = f"{input_path.resolve()}:/app/{input_mount}"
 
         docker_cmd.extend(["-v", volume_path])
 
     # Check output folder flag
     for item in bqat_args:
         if item in ("-O", "--output"):
-            output_path = Path(bqat_args.pop(bqat_args.index(item) + 1))
+            output_path = Path(Path(bqat_args.pop(bqat_args.index(item) + 1))).resolve()
             bqat_args.remove(item)
             break
         output_path = None
@@ -434,25 +484,21 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
             if not output_path.exists():
                 output_path.mkdir(parents=True)
             elif not output_path.is_dir():
-                print(f"Invalid output path: {output_path}.")
+                print(f"Invalid output path: {output_path}")
                 sys.exit(1)
         except Exception as e:
             print("Failed to create output folder:", str(e))
             sys.exit(1)
 
-        output_path = output_path.as_posix()
-        bqat_args.extend(["--output", f"'{output_path}'"])
+        output_cwd = Path.cwd()
+        if not output_path.is_relative_to(output_cwd):  # Handle '..'
+            output_cwd = output_path.parent
+        elif output_path.relative_to(output_cwd).as_posix() == ".":  # Handle '.'
+            output_cwd = output_cwd.parent
+        output_mount = output_path.relative_to(output_cwd)
 
-        # Set the volume path based on the OS
-        current_os = platform.system()
-        if current_os in ("Linux", "Darwin"):
-            volume_path = f"{current_dir}/{output_path}:/app/{output_path}"
-        elif current_os == "Windows":
-            volume_path = f"{os.path.join(current_dir, output_path)}:/app/{output_path}"
-        else:
-            print(f"Error. Unidentified Host OS: {current_os}.", file=sys.stderr)
-            sys.exit(1)
-
+        bqat_args.extend(["--output", f"'{output_mount}'"])
+        volume_path = f"{output_path.resolve()}:/app/{output_mount}"
         docker_cmd.extend(["-v", volume_path])
 
     docker_cmd.append(image_tag)
@@ -463,7 +509,7 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         inner_command = ["python3 -m bqat --help"]
     else:
         inner_command = [
-            f"python3 -m bqat -W '{Path(current_dir).as_posix()}' {' '.join(bqat_args)}"
+            f"python3 -m bqat -W '{current_dir.as_posix()}' {' '.join(bqat_args)}"
         ]
     docker_cmd.extend(inner_command)
 
@@ -502,5 +548,5 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
     except subprocess.CalledProcessError as e:
         # The subprocess will have already printed its stderr.
         # We exit with the same return code as the docker command.
-        print(f"{bqat_args=}")
+        # print(f"Command failed: {docker_cmd}")
         sys.exit(e.returncode)

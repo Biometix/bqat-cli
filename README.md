@@ -13,6 +13,7 @@
 <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/biometix/bqat-cli">
 <img alt="GitHub" src="https://img.shields.io/github/license/biometix/bqat-cli">
 
+![PyPI downloads](https://img.shields.io/badge/dynamic/json?label=downloads&query=total_downloads&url=https%3A%2F%2Fpypistats.org%2Fapi%2Fpackages%2Fbqat%2Foverall&color=blue)
 [![PyPI - Version](https://img.shields.io/pypi/v/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Format](https://img.shields.io/pypi/format/bqat)](https://pypi.python.org/pypi/bqat)

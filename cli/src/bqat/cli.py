@@ -12,10 +12,14 @@ def main() -> None:
         add_help=False,  # We will pass --help to the container
     )
     parser.add_argument(
-        "--version", "-v", action="store_true", help="Show version information."
+        "--version",
+        "-V",
+        action="store_true",
+        help="Show version information.",
     )
     parser.add_argument(
         "--update",
+        "-U",
         action="store_true",
         help="Check for and pull updates to the container image.",
     )

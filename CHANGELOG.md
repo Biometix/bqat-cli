@@ -1,3 +1,11 @@
+<a name="v1.8.5"></a>
+
+# v1.8.5 (2025-11-27)
+
+## 🔧 Fixes
+
+- Resolve absolute path handling issue for input/output (CLI).
+
 <a name="v1.8.4"></a>
 
 # v1.8.4 (2025-11-12)

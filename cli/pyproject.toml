@@ -1,6 +1,6 @@
 [project]
 name = "bqat"
-version = "1.8.4"
+version = "1.8.5"
 license = "Apache-2.0"
 description = "Biometric Quality Assessment Tool - CLI (BQAT-CLI)"
 readme = "README.md"
@@ -41,8 +41,8 @@ Issues = "https://github.com/Biometix/bqat-cli/discussions"
 bqat = "bqat:cli.main"
 
 [build-system]
-requires = ["uv_build>=0.9.8,<0.10.0"]
+requires = ["uv_build>=0.9.13,<0.10.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = ["pyinstaller>=6.16.0"]
+dev = ["pyinstaller>=6.17.0"]
