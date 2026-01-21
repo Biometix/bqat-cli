@@ -352,7 +352,7 @@ def filter(output, attributes, query, sort, cwd):
         print("\n> Summary:")
         summary = {"Output Filter": outlier_filter}
         Console().print_json(json.dumps(summary))
-    print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
+    Console().print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
     return dir
 
 
@@ -542,7 +542,7 @@ async def benchmark(
     Console().print_json(json.dumps(summary))
     # with open("data/benchmark.json", "w") as f:
     #     json.dump(result, f)
-    print("\n>> Benchmarking Finished <<\n")
+    Console().print("\n>> Benchmarking Finished <<\n")
 
 
 @ray.remote
@@ -614,7 +614,7 @@ def report(input, cwd):
         print("\n> Summary:")
         summary = {"EDA Report": report}
         Console().print_json(json.dumps(summary))
-    print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
+    Console().print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
     return dir
 
 
@@ -753,12 +753,15 @@ def preprocess(input_dir: str, output_dir: str, debugging: bool, config: dict) -
         },
     }
     Console().print_json(json.dumps(summary))
-    print("\n>> [bright_yellow]Preprocessing Task Finished[/bright_yellow] <<\n")
+    Console().print(
+        "\n>> [bright_yellow]Preprocessing Task Finished[/bright_yellow] <<\n"
+    )
 
 
 @ray.remote
 def preprocess_task(file: str, output: dir, config: dict) -> None:
     try:
+        import wsq
         file = Path(file)
         if not Path(output).exists():
             Path(output).mkdir(parents=True, exist_ok=True)

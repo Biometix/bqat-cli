@@ -1,3 +1,11 @@
+<a name="v1.8.6"></a>
+
+# v1.8.6 (2026-01-23)
+
+## 🔧 Fixes
+
+- Resolve WSQ conversion issue in preprocess mode.
+
 <a name="v1.8.5"></a>
 
 # v1.8.5 (2025-11-27)

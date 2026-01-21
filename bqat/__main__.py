@@ -18,6 +18,23 @@ from bqat.app import run as assessment_job
 # from bqat.utils import menu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
+PROC_TYPE = [
+    "wsq",
+    "jpg",
+    "jpeg",
+    "png",
+    "bmp",
+    "jp2",
+    "gif",
+    "tiff",
+    "tif",
+    "ppm",
+    "pgm",
+    "pbm",
+    "pnm",
+    "webp",
+    "avif",
+]
 
 
 @click.command(
@@ -277,10 +294,10 @@ def main(
     if mode == "preprocess":
         try:
             config = [i.casefold() for i in config.split(",")]
-            configs = {}
+            configs = {"source": PROC_TYPE}
 
             for item in config:
-                if item in INPUT_TYPE:
+                if item in PROC_TYPE:
                     configs["target"] = item
                 try:
                     if 0 < (num := float(item)) <= 10:
