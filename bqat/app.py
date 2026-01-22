@@ -547,6 +547,7 @@ async def benchmark(
 
 @ray.remote
 def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6):
+    results = []
     if mode == "speech" or (mode == "face" and engine in ("ofiq", "fusion")):
         try:
             result = scan(path, mode=mode, engine=engine, fusion=fusion)
@@ -557,11 +558,12 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6
             return
 
         for result in result_list:
-            write_csv(output_dir, fix_filepath(result))
+            result = fix_filepath(result)
             if result.get("log"):
                 log_dict = {"folder": path, "logs": result.pop("log")}
                 write_log(log_dir, log_dict)
-        return result_list
+            write_csv(output_dir, result)
+            results.append(result)
     else:
         try:
             result = scan(path, mode=mode, source=convert, target=target, engine=engine)
@@ -575,9 +577,9 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6
             for log in logs:
                 log.update({"file": path})
                 write_log(log_dir, log)
-
         write_csv(output_dir, result)
-        return [result]
+        results.append(result)
+    return results
 
 
 @ray.remote

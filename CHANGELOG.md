@@ -5,6 +5,7 @@
 ## 🔧 Fixes
 
 - Resolve WSQ conversion issue in preprocess mode.
+- Resolve Fusion engine logging issue.
 
 <a name="v1.8.5"></a>
 
