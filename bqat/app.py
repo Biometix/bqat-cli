@@ -29,6 +29,7 @@ from bqat.utils import (
     fix_filepath,
     generate_report,
     iter_matching_files,
+    reconstruct_filepath,
     split_input_folder,
     validate_path,
     write_csv,
@@ -54,6 +55,7 @@ async def run(
     query: str,
     sort: str,
     cwd: str,
+    prefix: str,
     batch: int,
     fusion: int,
     engine: str,
@@ -97,7 +99,7 @@ async def run(
         1 for _ in iter_matching_files(input_folder, pattern, extended(TYPE))
     )
 
-    metadata.add_row("Input Folder", f"[dark_goldenrod]{str(input_folder)}")
+    metadata.add_row("Input Folder", f"[dark_goldenrod]{prefix + input_folder}")
     metadata.add_row("Input Count", f"[bold yellow]{str(file_total)}")
 
     console.print(
@@ -170,7 +172,8 @@ async def run(
                         convert,
                         target,
                         engine,
-                        fusion,
+                        fusion=fusion,
+                        prefix=prefix,
                     )
                 )
                 not_ready = True
@@ -205,6 +208,7 @@ async def run(
                         convert,
                         target,
                         engine,
+                        prefix=prefix,
                     )
                 )
                 file_count += 1
@@ -286,7 +290,7 @@ async def run(
     try:
         if output_dir and reporting:
             # write_report(report_dir, output_dir, f"EDA Report (BQAT v{version})")
-            dir = generate_report(output_dir, cwd)
+            dir = generate_report(output_dir, cwd, prefix)
             report_dir = (
                 {"Preview Table": dir.get("table"), "EDA Report": dir.get("report")}
                 if dir
@@ -300,7 +304,7 @@ async def run(
 
     try:
         if output_dir and (attributes or query or sort):
-            dir = filter_output(output_dir, attributes, query, sort, cwd)
+            dir = filter_output(output_dir, attributes, query, sort, cwd, prefix)
             outlier_filter = (
                 {"Output": dir.get("output"), "Report": dir.get("report")}
                 if dir
@@ -332,9 +336,9 @@ async def run(
     Console().print("\n>> [bright_yellow]Task Finished[/bright_yellow] <<\n")
 
 
-def filter(output, attributes, query, sort, cwd):
+def filter(output, attributes, query, sort, cwd, prefix):
     try:
-        dir = filter_output(output, attributes, query, sort, cwd)
+        dir = filter_output(output, attributes, query, sort, cwd, prefix)
         outlier_filter = (
             {
                 "Table": dir.get("table"),
@@ -546,7 +550,17 @@ async def benchmark(
 
 
 @ray.remote
-def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6):
+def scan_task(
+    path,
+    output_dir,
+    log_dir,
+    mode,
+    convert,
+    target,
+    engine,
+    fusion=6,
+    prefix="",
+):
     results = []
     if mode == "speech" or (mode == "face" and engine in ("ofiq", "fusion")):
         try:
@@ -559,6 +573,7 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6
 
         for result in result_list:
             result = fix_filepath(result)
+            result = reconstruct_filepath(result, prefix)
             if result.get("log"):
                 log_dict = {"folder": path, "logs": result.pop("log")}
                 write_log(log_dir, log_dict)
@@ -577,6 +592,7 @@ def scan_task(path, output_dir, log_dir, mode, convert, target, engine, fusion=6
             for log in logs:
                 log.update({"file": path})
                 write_log(log_dir, log)
+        result = reconstruct_filepath(result, prefix)
         write_csv(output_dir, result)
         results.append(result)
     return results
@@ -600,9 +616,9 @@ def benchmark_task(path: str, mode: str, engine: str, fusion=6) -> None:
         )
 
 
-def report(input, cwd):
+def report(input, cwd, prefix):
     try:
-        dir = generate_report(input, cwd)
+        dir = generate_report(input, cwd, prefix)
         report = (
             {"Preview Table": dir.get("table"), "EDA Report": dir.get("report")}
             if dir

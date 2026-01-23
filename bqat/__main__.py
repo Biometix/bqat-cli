@@ -137,6 +137,12 @@ PROC_TYPE = [
     help="Specify current working directory for url.",
 )
 @click.option(
+    "--prefix",
+    "-P",
+    default="",
+    help="Specify cwd prefix for file path reconstruction.",
+)
+@click.option(
     "--batch",
     default=30,
     help="Fusion mode processing batch size.",
@@ -180,6 +186,7 @@ def main(
     query,
     sort,
     cwd,
+    prefix,
     batch,
     fusion,
     engine,
@@ -284,11 +291,11 @@ def main(
     target_type = target
 
     if mode == "filter":
-        filter_job(input, columns, query, sort, cwd)
+        filter_job(input, columns, query, sort, cwd, prefix)
         return
 
     if mode == "report":
-        report_job(input, cwd)
+        report_job(input, cwd, prefix)
         return
 
     if mode == "preprocess":
@@ -355,6 +362,7 @@ def main(
                 query,
                 sort,
                 cwd,
+                prefix,
                 batch,
                 fusion,
                 engine,

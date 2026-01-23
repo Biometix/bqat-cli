@@ -1,10 +1,11 @@
 import atexit
 import json
+import os
 import platform
 import re
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from bqat import __package__, __version__
 
@@ -444,10 +445,20 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
     # Optional CWD for reporting
     current_dir = Path.cwd()
 
+    # Optional prefix to reconstruct the file path
+    input_prefix = ""
+
     # Check input folder flag
     for item in bqat_args:
         if item in ("-I", "--input"):
-            input_path = Path(Path(bqat_args.pop(bqat_args.index(item) + 1)).resolve())
+            input_path_raw = bqat_args.pop(bqat_args.index(item) + 1)
+            # PowerShell auto added trailing '\' will escapes the closing quote
+            if '"' in input_path_raw:
+                split_list = input_path_raw.split('"')
+                input_path_raw = split_list[0]
+                if len(split_list) > 1:
+                    bqat_args.extend(split_list[1:])
+            input_path = Path(Path(input_path_raw).expanduser().resolve())
             bqat_args.remove(item)
             break
         input_path = None
@@ -468,12 +479,22 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         bqat_args.extend(["--input", f"'{input_mount}'"])
         volume_path = f"{input_path.resolve()}:/app/{input_mount}"
 
+        input_prefix = strip_suffix_path(Path(input_path_raw), input_mount)
+        if os.name == "nt":
+            input_prefix = input_prefix + "\\"
+        else:
+            input_prefix = input_prefix + "/"
+
         docker_cmd.extend(["-v", volume_path])
 
     # Check output folder flag
     for item in bqat_args:
         if item in ("-O", "--output"):
-            output_path = Path(Path(bqat_args.pop(bqat_args.index(item) + 1))).resolve()
+            output_path = (
+                Path(Path(bqat_args.pop(bqat_args.index(item) + 1)))
+                .expanduser()
+                .resolve()
+            )
             bqat_args.remove(item)
             break
         output_path = None
@@ -498,7 +519,7 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         output_mount = output_path.relative_to(output_cwd)
 
         bqat_args.extend(["--output", f"'{output_mount}'"])
-        volume_path = f"{output_path.resolve()}:/app/{output_mount}"
+        volume_path = f"{output_path.expanduser().resolve()}:/app/{output_mount}"
         docker_cmd.extend(["-v", volume_path])
 
     docker_cmd.append(image_tag)
@@ -509,7 +530,7 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         inner_command = ["python3 -m bqat --help"]
     else:
         inner_command = [
-            f"python3 -m bqat -W '{current_dir.as_posix()}' {' '.join(bqat_args)}"
+            f"python3 -m bqat -P '{input_prefix}' -W '{current_dir.as_posix()}' {' '.join(bqat_args)}"
         ]
     docker_cmd.extend(inner_command)
 
@@ -550,3 +571,58 @@ def run_container(image_tag, bqat_args: list[str], shm_size=None):
         # We exit with the same return code as the docker command.
         # print(f"Command failed: {docker_cmd}")
         sys.exit(e.returncode)
+
+
+def strip_suffix_path(a: str | Path, b: str | Path) -> str:
+    """
+    Removes the path suffix 'b' from path 'a'.
+    Returns a string.
+    Preserves '~' if present, and contracts absolute paths to '~' if they match the home directory.
+
+    Example:
+        strip_suffix_path("/home/user/project/src", "src") -> "~/project"
+        strip_suffix_path("~/a/b", "b") -> "~/a"
+    """
+    a_str = str(a)
+    b_str = str(b)
+
+    # Detect path flavor: use Windows logic if backslashes are present or if running on Windows
+    # (checking backslashes first allows handling Windows paths on Linux)
+    is_win = "\\" in a_str or "\\" in b_str or os.name == "nt"
+    PureCls = PureWindowsPath if is_win else PurePosixPath
+
+    a_pure = PureCls(a_str)
+    b_pure = PureCls(b_str)
+
+    # 1. Strip the suffix
+    b_len = len(b_pure.parts)
+    if (
+        b_len > 0
+        and b_len <= len(a_pure.parts)
+        and a_pure.parts[-b_len:] == b_pure.parts
+    ):
+        remaining = a_pure.parts[:-b_len]
+        if not remaining:
+            return "."
+        res_pure = PureCls(*remaining)
+    else:
+        res_pure = a_pure
+
+    res_str = str(res_pure)
+
+    # 2. Contract to '~' if the path is absolute and matches the current user's home.
+    # We can only do this reliably if the path flavor matches the current OS.
+    if is_win == (os.name == "nt"):
+        try:
+            # Resolve to a concrete Path object to check against home
+            p = Path(res_str)
+            if p.is_absolute():
+                home = Path.home()
+                # relative_to throws ValueError if p is not inside home
+                rel = p.relative_to(home)
+                return str(Path("~") / rel)
+        except ValueError:
+            # Path is not inside home directory
+            pass
+
+    return res_str

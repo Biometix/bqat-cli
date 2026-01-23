@@ -2,6 +2,10 @@
 
 # v1.8.6 (2026-01-23)
 
+## 🚀 Features
+
+- Preserve full path for input.
+
 ## 🔧 Fixes
 
 - Resolve WSQ conversion issue in preprocess mode.
