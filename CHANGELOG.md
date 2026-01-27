@@ -5,6 +5,7 @@
 ## 🚀 Features
 
 - Preserve full path for input.
+- Upgrade OFIQ to v1.1.1
 
 ## 🔧 Fixes
 

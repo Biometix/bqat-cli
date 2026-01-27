@@ -52,9 +52,9 @@ RUN cd /app; git clone --recursive https://github.com/usnistgov/NFIQ2.git; \
     cmake .. -DCMAKE_CONFIGURATION_TYPES=Release; cmake --build . --config Release; cmake --install .
 
 RUN set -e && apt install -y --no-install-recommends python3-pip liblapack-dev; \
-    pip install conan==2.0.17 cmake==3.26; \
+    pip install conan==2.18.1 cmake==3.26; \
     cd /app; mkdir ofiq; cd ofiq; git clone https://github.com/BSI-OFIQ/OFIQ-Project.git; \
-    cd OFIQ-Project; git checkout df8fbb5e4bd8de09ae998ff69bc252f6be4367f8; \
+    cd OFIQ-Project; git checkout 2eb26a3f2b02738a6400eee14a20fb442413afce; \
     cd scripts; chmod +x *.sh; \
     if [ "$TARGETARCH" = "arm64" ]; \
     then ./build.sh --os linux-arm64; mv /app/ofiq/OFIQ-Project/install_arm64_linux /app/ofiq/OFIQ-Project/install_linux; \
