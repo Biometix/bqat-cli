@@ -18,6 +18,23 @@ from bqat.app import run as assessment_job
 # from bqat.utils import menu
 
 INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
+PROC_TYPE = [
+    "wsq",
+    "jpg",
+    "jpeg",
+    "png",
+    "bmp",
+    "jp2",
+    "gif",
+    "tiff",
+    "tif",
+    "ppm",
+    "pgm",
+    "pbm",
+    "pnm",
+    "webp",
+    "avif",
+]
 
 
 @click.command(
@@ -120,6 +137,12 @@ INPUT_TYPE = ["wsq", "jpg", "jpeg", "png", "bmp", "jp2"]
     help="Specify current working directory for url.",
 )
 @click.option(
+    "--prefix",
+    "-P",
+    default="",
+    help="Specify cwd prefix for file path reconstruction.",
+)
+@click.option(
     "--batch",
     default=30,
     help="Fusion mode processing batch size.",
@@ -163,6 +186,7 @@ def main(
     query,
     sort,
     cwd,
+    prefix,
     batch,
     fusion,
     engine,
@@ -267,20 +291,20 @@ def main(
     target_type = target
 
     if mode == "filter":
-        filter_job(input, columns, query, sort, cwd)
+        filter_job(input, columns, query, sort, cwd, prefix)
         return
 
     if mode == "report":
-        report_job(input, cwd)
+        report_job(input, cwd, prefix)
         return
 
     if mode == "preprocess":
         try:
             config = [i.casefold() for i in config.split(",")]
-            configs = {}
+            configs = {"source": PROC_TYPE}
 
             for item in config:
-                if item in INPUT_TYPE:
+                if item in PROC_TYPE:
                     configs["target"] = item
                 try:
                     if 0 < (num := float(item)) <= 10:
@@ -338,6 +362,7 @@ def main(
                 query,
                 sort,
                 cwd,
+                prefix,
                 batch,
                 fusion,
                 engine,

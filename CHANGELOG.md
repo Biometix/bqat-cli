@@ -1,3 +1,25 @@
+<a name="v1.8.6"></a>
+
+# v1.8.6 (2026-01-23)
+
+## 🚀 Features
+
+- Preserve full path for input.
+- Upgrade OFIQ to v1.1.1
+
+## 🔧 Fixes
+
+- Resolve WSQ conversion issue in preprocess mode.
+- Resolve Fusion engine logging issue.
+
+<a name="v1.8.5"></a>
+
+# v1.8.5 (2025-11-27)
+
+## 🔧 Fixes
+
+- Resolve absolute path handling issue for input/output (CLI).
+
 <a name="v1.8.4"></a>
 
 # v1.8.4 (2025-11-12)

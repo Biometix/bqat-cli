@@ -232,7 +232,7 @@ def validate_path(path) -> str:
 #     return ans
 
 
-def filter_output(filepath, attributes, query, sort, cwd) -> dict:
+def filter_output(filepath, attributes, query, sort, cwd, prefix) -> dict:
     p = Path(filepath)
     if not (attributes or query or sort):
         return False
@@ -357,7 +357,9 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
                     </script>
                     """
                 )
-                df_raw["file"] = df_raw["file"].map(lambda x: f"file://{cwd}/{x}")
+                df_raw["file"] = df_raw["file"].map(
+                    lambda x: f"file://{cwd}/{x.lstrip(prefix)}"
+                )
 
                 def make_clickable(val):
                     return '<a target="_blank" href="{0}" class="image-preview">{0}</a>'.format(
@@ -382,7 +384,7 @@ def filter_output(filepath, attributes, query, sort, cwd) -> dict:
         raise RuntimeError("output csv not fount.")
 
 
-def generate_report(filepath, cwd="") -> dict:
+def generate_report(filepath, cwd="", prefix="") -> dict:
     p = Path(filepath)
     if not p.is_file() or p.suffix != ".csv":
         print(f">>> Input [{str(p)}] not valid, please specify a CSV file. exit.")
@@ -504,7 +506,9 @@ def generate_report(filepath, cwd="") -> dict:
                     col for col in excluded_columns if col in df_raw.columns
                 ]
                 df_raw = df_raw.drop(columns=excluded_columns)
-                df_raw["file"] = df_raw["file"].map(lambda x: f"file://{cwd}/{x}")
+                df_raw["file"] = df_raw["file"].map(
+                    lambda x: f"file://{cwd}/{x.lstrip(prefix)}"
+                )
 
                 def make_clickable(val):
                     return '<a target="_blank" href="{0}" class="image-preview">{0}</a>'.format(
@@ -660,3 +664,8 @@ def iter_matching_files(
     for p in Path(base_dir).rglob(f"{name_pattern}.*"):
         if not extensions or p.suffix.strip(".") in extensions:
             yield p
+
+
+def reconstruct_filepath(output_dict, prefix):
+    output_dict["file"] = prefix + output_dict["file"]
+    return output_dict
