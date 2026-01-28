@@ -249,10 +249,18 @@ uv run pyinstaller -F src/bqat/cli.py -n bqat
 ./build-and-publish-multiarch.sh build <OWNER> <REPO> <TAG> <VER_CORE> <VER_CLI>
 ```
 
+``` sh
+./build-and-publish-multiarch.sh build biometix bqat-cli v1.2.3 v3.2.1
+```
+
 + Run merge step once (on any machine) with the two full digest strings.
 
 ``` sh
 ./build-and-publish-multiarch.sh merge <OWNER> <REPO> <TAG> <AMD64_DIGEST> <ARM64_DIGEST>
 ```
 
-> Make sure docker login ghcr.io is completed beforehand.
+``` sh
+./build-and-publish-multiarch.sh merge biometix bqat-cli v1.2.3 ghcr.io/biometix/bqat-cli@sha256:... ghcr.io/biometix/bqat-cli@sha256:...
+```
+
+> Make sure `docker login ghcr.io` succeed beforehand.
