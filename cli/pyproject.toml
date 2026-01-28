@@ -8,7 +8,7 @@ authors = [{ name = "Liam Wu", email = "liam.wu@biometix.com" }]
 requires-python = ">=3.10,<3.15"
 dependencies = []
 keywords = [
-  "bqat", "cli", "biometric"
+  "bqat", "cli", "biometric", "data", "quality", "assessment"
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -31,11 +31,12 @@ classifiers = [
 ]
 
 [project.urls]
-Documentation = "https://biometix.github.io/getting_started/cli.html"
-Changelog = "https://biometix.github.io/changelog/#bqat-cli"
-Repository = "https://github.com/Biometix/bqat-cli"
-Releases = "https://github.com/Biometix/bqat-cli/releases"
-Issues = "https://github.com/Biometix/bqat-cli/discussions"
+homepage = "https://docs.bqat.io/"
+documentation = "https://biometix.github.io/getting_started/cli.html"
+changelog = "https://biometix.github.io/changelog/#bqat-cli"
+repository = "https://github.com/Biometix/bqat-cli"
+releases = "https://github.com/Biometix/bqat-cli/releases"
+issues = "https://github.com/Biometix/bqat-cli/discussions"
 
 [project.scripts]
 bqat = "bqat:cli.main"

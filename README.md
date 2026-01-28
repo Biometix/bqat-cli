@@ -1,19 +1,23 @@
 Biometric Quality Assessment Tool (BQAT) - CLI
 ==============================================
 
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+[![Release](https://github.com/Biometix/bqat-cli/actions/workflows/release.yml/badge.svg)](https://github.com/Biometix/bqat-cli/actions/workflows/release.yml)
 <img alt="GitHub tag (latest by date)" src="https://img.shields.io/github/v/tag/biometix/bqat-cli">
 <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/biometix/bqat-cli">
 <img alt="GitHub issues" src="https://img.shields.io/github/issues-raw/biometix/bqat-cli">
 <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/biometix/bqat-cli">
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
 <img alt="GitHub" src="https://img.shields.io/github/license/biometix/bqat-cli">
 
-![PyPI downloads](https://img.shields.io/badge/dynamic/json?label=downloads&query=total_downloads&url=https%3A%2F%2Fpypistats.org%2Fapi%2Fpackages%2Fbqat%2Foverall&color=blue)
 [![PyPI - Version](https://img.shields.io/pypi/v/bqat)](https://pypi.python.org/pypi/bqat)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/bqat?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=ORANGE&left_text=downloads)](https://pepy.tech/projects/bqat)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Format](https://img.shields.io/pypi/format/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bqat)](https://pypi.python.org/pypi/bqat)
 [![PyPI - License](https://img.shields.io/pypi/l/bqat)](https://pypi.python.org/pypi/bqat)
+
+> Built-in BQAT Core:
+![GitHub Tag](https://img.shields.io/badge/tag-v1.6.5-blue?style=flat)
 
 BQAT is a biometric quality assessment tool for generating and analysing biometric sample quality to international standards and supporting customized metrics. It takes as input directory of biometric images/data in standard formats (e.g. wsq,png,jpg) and output both the raw quality information as well as an analysis report.
 

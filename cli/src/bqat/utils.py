@@ -202,6 +202,52 @@ def get_shm_size(total_memory_mb):
 #         return True
 
 
+def check_cli_version(package_name: str) -> bool:
+    # Get the current version of the package
+    try:
+        current_version = subprocess.check_output(
+            [sys.executable, "-m", "pip", "show", package_name],
+            stderr=subprocess.STDOUT,
+        ).decode("utf-8")
+
+        for line in current_version.splitlines():
+            if line.startswith("Version:"):
+                current_version = line.split(" ")[1]
+                break
+    except subprocess.CalledProcessError as e:
+        print(
+            f"Error getting the current version of {package_name}: {e.output.decode('utf-8')}"
+        )
+        return False
+
+    # Check for outdated packages using pip list --outdated
+    try:
+        outdated = subprocess.check_output(
+            [sys.executable, "-m", "pip", "list", "--outdated"],
+            stderr=subprocess.STDOUT,
+        ).decode("utf-8")
+
+        if package_name in outdated:
+            # Extract the latest version from the output
+            for line in outdated.splitlines():
+                if package_name in line:
+                    latest_version = line.split()[2]
+                    print(
+                        f"> A new version of '{package_name}' is available: {latest_version}. You have version {current_version}."
+                    )
+                    break
+        else:
+            print(
+                f"> The installed '{package_name}' is up-to-date (version {current_version})."
+            )
+            return False
+    except Exception as e:
+        print(f"Error checking for outdated packages: {str(e)}")
+        return False
+
+    return True
+
+
 def handle_update(image_tag, package_name="bqat"):
     """Handles the BQAT CLI update logic."""
     print("Pulling the latest 'bqat-cli' image...")
@@ -241,48 +287,7 @@ def handle_update(image_tag, package_name="bqat"):
     except (json.JSONDecodeError, IndexError) as e:
         print(f"Error parsing Docker image information: {e}", file=sys.stderr)
 
-    # Get the current version of the package
-    try:
-        current_version = subprocess.check_output(
-            [sys.executable, "-m", "pip", "show", package_name],
-            stderr=subprocess.STDOUT,
-        ).decode("utf-8")
-
-        for line in current_version.splitlines():
-            if line.startswith("Version:"):
-                current_version = line.split(" ")[1]
-                break
-    except subprocess.CalledProcessError as e:
-        print(
-            f"Error getting the current version of {package_name}: {e.output.decode('utf-8')}"
-        )
-        return
-
-    # Check for outdated packages using pip list --outdated
-    try:
-        outdated = subprocess.check_output(
-            [sys.executable, "-m", "pip", "list", "--outdated"],
-            stderr=subprocess.STDOUT,
-        ).decode("utf-8")
-
-        if package_name in outdated:
-            # Extract the latest version from the output
-            for line in outdated.splitlines():
-                if package_name in line:
-                    _, latest_version = line.split()[
-                        :2
-                    ]  # Get the package name and latest version
-                    print(
-                        f"A new version of '{package_name}' is available: {latest_version}. You have version {current_version}."
-                    )
-                    break
-        else:
-            print(
-                f"The installed '{package_name}' is up-to-date (version {current_version})."
-            )
-            return
-    except Exception as e:
-        print(f"Error checking for outdated packages: {str(e)}")
+    if not check_cli_version(package_name):
         return
 
     # Upgrade the package if a new version is available
@@ -291,7 +296,7 @@ def handle_update(image_tag, package_name="bqat"):
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", "--upgrade", package_name]
         )
-        print(f"Successfully upgraded '{package_name}' to version {latest_version}.")
+        print(f"> Successfully upgraded: '{package_name}'.")
     except subprocess.CalledProcessError as e:
         print(f"Error upgrading '{package_name}': {e.output.decode('utf-8')}")
 
@@ -380,6 +385,8 @@ def show_version(image_tag):
     """Displays the version of the CLI and the container image."""
     # Version of the CLI app
     print(f"BQAT CLI: v{__version__}")
+    check_cli_version(__package__)
+
     # Version of the container image
     try:
         result = subprocess.run(
