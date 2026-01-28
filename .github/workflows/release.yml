@@ -56,6 +56,14 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Inspect Runner Hardware
+        run: |
+          echo "### Hardware Specs for ${{ matrix.platform }}"
+          echo "Architecture: $(uname -m)"
+          echo "CPU Cores: $(nproc)"
+          echo "Memory: $(free -h | grep Mem | awk '{print $2}')"
+          echo "Kernel: $(uname -r)"
 
       - name: Build and push by digest
         id: build
