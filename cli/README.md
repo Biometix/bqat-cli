@@ -61,6 +61,6 @@ Please refer to the documentation of [BQAT](https://biometix.github.io/) further
 | Flag | Description |
 | --- | --- |
 | --help | Print help info. |
-| --version, -v | Display version info. |
-| --update | Update BQAT backend container. |
+| --version, -V | Display version info. |
+| --update, -U | Update BQAT backend container. |
 | --uninstall | Uninstall BQAT-CLI. |
