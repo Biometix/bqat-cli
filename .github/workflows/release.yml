@@ -25,28 +25,26 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: 'true'
-      - name: Get tags from repository and submodules
+          fetch-depth: 0
+
+      - name: Extract Versions
         id: tags
         run: |
-          git fetch --tags --depth=3
-          CLI_VER=$(git describe --tags --abbrev=0)
-          echo "cli_ver=${CLI_VER#v}" >> $GITHUB_OUTPUT
+          RAW_TAG="${{ github.ref_name }}"
+          echo "cli_ver=${RAW_TAG#v}" >> $GITHUB_OUTPUT
           cd bqat/core/
-          git fetch --tags --depth=3
           CORE_VER=$(git describe --tags --abbrev=0)
           echo "core_ver=${CORE_VER#v}" >> $GITHUB_OUTPUT
-
-  cleanup:
-    name: Cleanup Old Caches
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - name: Delete old Docker caches
-        run: |
-          gh cache delete --all --repo ${{ github.repository }} || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "------------------------------------------"
+          echo "Triggering Tag: $RAW_TAG"
+          echo "Parsed CLI Version: $CLI_VER"
+          echo "Detected Core Version: $CORE_VER"
+          echo "------------------------------------------"
+          echo "### 📦 Version Manifest" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Version |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **CLI (Ref)** | \`$CLI_VER\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Core (Submodule)** | \`$CORE_VER\` |" >> $GITHUB_STEP_SUMMARY
 
   build:
     name: Build Architecture
@@ -97,7 +95,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:build-${{ github.sha }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=build-${{ matrix.platform }}
