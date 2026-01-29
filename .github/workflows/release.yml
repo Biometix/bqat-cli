@@ -30,15 +30,25 @@ jobs:
       - name: Extract Versions
         id: tags
         run: |
-          echo "cli_ver=${GITHUB_REF#v}" >> $GITHUB_OUTPUT
+          # 1. Define local variables (using uppercase for consistency)
+          CLI_VER=${GITHUB_REF#refs/tags/v}
+          
           cd bqat/core/
           CORE_VER=$(git describe --tags --abbrev=0)
-          echo "core_ver=${CORE_VER#v}" >> $GITHUB_OUTPUT
+          CORE_VER=${CORE_VER#v} # Strip 'v' if present
+          
+          # 2. Set GitHub Actions Outputs (for use in other steps)
+          echo "cli_ver=$CLI_VER" >> $GITHUB_OUTPUT
+          echo "core_ver=$CORE_VER" >> $GITHUB_OUTPUT
+          
+          # 3. Print to logs (using the local variables defined above)
           echo "------------------------------------------"
           echo "Triggering Tag: $GITHUB_REF"
           echo "Parsed CLI Version: $CLI_VER"
           echo "Detected Core Version: $CORE_VER"
           echo "------------------------------------------"
+          
+          # 4. Generate Step Summary
           echo "### 📦 Version Manifest" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Version |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
