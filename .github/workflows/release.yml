@@ -30,13 +30,12 @@ jobs:
       - name: Extract Versions
         id: tags
         run: |
-          RAW_TAG="${{ github.ref_name }}"
-          echo "cli_ver=${RAW_TAG#v}" >> $GITHUB_OUTPUT
+          echo "cli_ver=${GITHUB_REF#v}" >> $GITHUB_OUTPUT
           cd bqat/core/
           CORE_VER=$(git describe --tags --abbrev=0)
           echo "core_ver=${CORE_VER#v}" >> $GITHUB_OUTPUT
           echo "------------------------------------------"
-          echo "Triggering Tag: $RAW_TAG"
+          echo "Triggering Tag: $GITHUB_REF"
           echo "Parsed CLI Version: $CLI_VER"
           echo "Detected Core Version: $CORE_VER"
           echo "------------------------------------------"
