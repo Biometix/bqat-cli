@@ -1,6 +1,6 @@
 [project]
 name = "bqat"
-version = "1.8.6"
+version = "1.8.7"
 license = "Apache-2.0"
 description = "Biometric Quality Assessment Tool - CLI (BQAT-CLI)"
 readme = "README.md"
