@@ -536,8 +536,7 @@ def extended(ext_list):
     """Extends lower case file extensions list with UPPER and Capitalize ones."""
     full_list = []
     for ext in ext_list:
-        full_list.extend([ext.upper(), ext.capitalize()])
-    full_list.extend(ext_list)
+        full_list.extend([ext.lower(), ext.upper(), ext.capitalize()])
     return full_list
 
 

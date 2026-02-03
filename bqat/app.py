@@ -149,7 +149,7 @@ async def run(
             input_folders = split_input_folder(
                 input_folder=input_folder,
                 temp_folder=temp_folder,
-                exts=TYPE,
+                exts=extended(TYPE),
                 batch_size=batch,
                 pattern=pattern,
                 limit=limit,
@@ -444,7 +444,7 @@ async def benchmark(
             input_folders = split_input_folder(
                 input_folder=input_dir,
                 temp_folder=temp_folder,
-                exts=TYPE,
+                exts=extended(TYPE),
                 batch_size=batch,
                 limit=limit,
             )

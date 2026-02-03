@@ -1,3 +1,11 @@
+<a name="v1.8.7"></a>
+
+# v1.8.7 (2026-02-03)
+
+## 🔧 Fixes
+
+- Resolve file extension handling issue.
+
 <a name="v1.8.6"></a>
 
 # v1.8.6 (2026-01-23)
